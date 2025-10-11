@@ -1,186 +1,156 @@
-import classNames from 'classnames/bind';
-import styles from './Header.module.scss';
-
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-
+import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faBars, faCartPlus, faUser } from '@fortawesome/free-solid-svg-icons';
 
-import { useEffect, useState } from 'react';
-
+import styles from './Header.module.scss';
 import { useStore } from '../../hooks/useStore';
 import { requestSearchProduct } from '../../config/request';
-
-import useDebound from '../../hooks/useDebounce';
+import useDebounce from '../../hooks/useDebounce';
 
 const cx = classNames.bind(styles);
 
 function Header() {
-    const [dataSearch, setDataSearch] = useState([]);
     const [searchValue, setSearchValue] = useState('');
-    const [checkHeader, setCheckHeader] = useState(0);
+    const [dataSearch, setDataSearch] = useState([]);
     const [showMenu, setShowMenu] = useState(false);
-
     const { pathname } = useLocation();
 
-    useEffect(() => {
-        switch (pathname.slice(1, 999)) {
-            case '':
-                setCheckHeader(1);
-                break;
-            case 'category':
-                setCheckHeader(1);
-                break;
-            case 'blog':
-                setCheckHeader(2);
-                break;
-            case 'checkout':
-                setCheckHeader(4);
-                break;
-            case 'login':
-                setCheckHeader(6);
-                break;
-            case 'register':
-                setCheckHeader(7);
-                break;
-            case 'contact':
-                setCheckHeader(3);
-                break;
-            case 'info':
-                setCheckHeader(5);
-                break;
-            case 'cart':
-                setCheckHeader(5);
-                break;
-        }
-    }, []);
-
     const { dataUser, dataCart } = useStore();
+    const debounceSearch = useDebounce(searchValue, 500);
 
-    const handleShowMenu = () => {
-        setShowMenu(!showMenu);
-    };
+    // Determine header state based on pathname
+    const checkHeader = useMemo(() => {
+        const path = pathname.replace('/', '');
+        const map = {
+            '': 1,
+            category: 1,
+            blog: 2,
+            contact: 3,
+            checkout: 4,
+            info: 5,
+            cart: 5,
+            login: 6,
+            register: 7,
+        };
+        return map[path] || 0;
+    }, [pathname]);
 
-    const debounceSearch = useDebound(searchValue, 500);
-
+    // Handle debounced search
     useEffect(() => {
-        if (debounceSearch.length > 0) {
-            const fetchData = async () => {
-                const res = await requestSearchProduct(debounceSearch);
-                setDataSearch(res.metadata);
-            };
-            fetchData();
+        if (!debounceSearch.trim()) {
+            setDataSearch([]);
+            return;
         }
+
+        const fetchData = async () => {
+            try {
+                const res = await requestSearchProduct(debounceSearch);
+                setDataSearch(res?.metadata || []);
+            } catch (error) {
+                console.error('Search failed:', error);
+            }
+        };
+
+        fetchData();
     }, [debounceSearch]);
 
+    // Toggle mobile menu
+    const handleShowMenu = () => setShowMenu((prev) => !prev);
+
     return (
-        <div className={cx('wrapper')}>
+        <header className={cx('wrapper')}>
             <div className={cx('inner')}>
-                <Link style={{ textDecoration: 'none' }} to="/">
-                    <div className={cx('logo')}>
-                        <img src={'https://5sfashion.vn/frontend/assets/images/logo.png'} alt="" />
-                    </div>
+                {/* Logo */}
+                <Link to="/" className={cx('logo')}>
+                    <img src="https://5sfashion.vn/frontend/assets/images/logo.png" alt="5S Fashion Logo" />
                 </Link>
 
-                <div className={cx('')}>
+                {/* Search Box */}
+                <div className={cx('search-section')}>
                     <div className={cx('input-search')}>
-                        <input onChange={(e) => setSearchValue(e.target.value)} />
-                        <FontAwesomeIcon icon={faSearch} style={{ paddingRight: '15px' }} />
+                        <input
+                            value={searchValue}
+                            onChange={(e) => setSearchValue(e.target.value)}
+                            placeholder="Tìm kiếm sản phẩm..."
+                        />
+                        <FontAwesomeIcon icon={faSearch} />
                     </div>
-                    <div className={cx('search-result')}>
-                        {dataSearch.length > 0 && searchValue ? (
-                            <div className={cx('result')}>
-                                {dataSearch.map((item) => (
-                                    <Link to={`/product/${item?._id}`} key={item?._id} id={cx('test')}>
-                                        <div className={cx('form-result')}>
-                                            <img id={cx('img-result')} src={`${item?.images[0]}`} alt="" />
-                                            <h5>{item?.name}</h5>
-                                            <span>{item?.price?.toLocaleString()} đ</span>
-                                        </div>
-                                    </Link>
-                                ))}
+
+                    {dataSearch.length > 0 && (
+                        <div className={cx('search-result')}>
+                            {dataSearch.map((item) => (
+                                <Link key={item._id} to={`/product/${item._id}`} className={cx('result-item')}>
+                                    <img src={item.images?.[0]} alt={item.name} />
+                                    <div>
+                                        <h5>{item.name}</h5>
+                                        <span>{item.price?.toLocaleString()} đ</span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Menu Button (mobile) */}
+                <button onClick={handleShowMenu} id={cx('btn-menu')}>
+                    <FontAwesomeIcon icon={faBars} />
+                    <span>Menu</span>
+                </button>
+
+                {/* Controller */}
+                <nav className={cx('controller', { active: showMenu })}>
+                    <ul>
+                        <li>
+                            <Link className={cx(checkHeader === 1 ? 'checkHeader' : 'navHeader')} to="/category">
+                                Sản Phẩm
+                            </Link>
+                        </li>
+                        <li>
+                            <Link className={cx(checkHeader === 2 ? 'checkHeader' : 'navHeader')} to="/blog">
+                                Bài Viết
+                            </Link>
+                        </li>
+                        <li className={cx(checkHeader === 3 ? 'checkHeader' : 'navHeader')}>
+                            <Link style={{ textDecoration: 'none', color: '#333' }} to="/contact">
+                                Liên Hệ
+                            </Link>
+                        </li>
+                        <li>
+                            <Link className={cx(checkHeader === 4 ? 'checkHeader' : 'navHeader')} to="/checkout">
+                                Thanh Toán
+                            </Link>
+                        </li>
+
+                        {dataUser?._id ? (
+                            <div className={cx('controller-user')}>
+                                <Link to="/cart">
+                                    <button className={cx('btn-cart')}>
+                                        <FontAwesomeIcon icon={faCartPlus} />
+                                        {dataCart?.data?.length > 0 && <span>{dataCart.data.length}</span>}
+                                    </button>
+                                </Link>
+                                <Link to="/info">
+                                    <button>
+                                        <FontAwesomeIcon icon={faUser} />
+                                    </button>
+                                </Link>
                             </div>
                         ) : (
-                            <></>
-                        )}
-                    </div>
-                </div>
-
-                <div onClick={handleShowMenu} id={cx('btn-menu')}>
-                    <span>Menu</span>
-                    <FontAwesomeIcon icon={faBars} />
-                </div>
-
-                <div className={cx('controller')}>
-                    <ul>
-                        <Link
-                            style={{ textDecoration: 'none', color: '#333' }}
-                            to="/category"
-                            onClick={() => setCheckHeader(0)}
-                        >
-                            <li className={cx(checkHeader === 1 ? 'checkHeader' : '')}>Sản Phẩm</li>
-                        </Link>
-
-                        <Link
-                            style={{ textDecoration: 'none', color: '#333' }}
-                            to="/blog"
-                            onClick={() => setCheckHeader(1)}
-                        >
-                            <li className={cx(checkHeader === 2 ? 'checkHeader' : '')}>Bài Viết</li>
-                        </Link>
-                        <Link
-                            style={{ textDecoration: 'none', color: '#333' }}
-                            to="/contact"
-                            onClick={() => setCheckHeader(2)}
-                        >
-                            <li className={cx(checkHeader === 3 ? 'checkHeader' : '')}>Liên Hệ</li>
-                        </Link>
-                        <Link
-                            style={{ textDecoration: 'none', color: '#333' }}
-                            to="/checkout"
-                            onClick={() => setCheckHeader(3)}
-                        >
-                            <li className={cx(checkHeader === 4 ? 'checkHeader' : '')}>Thanh Toán</li>
-                        </Link>
-
-                        {dataUser._id ? (
                             <>
-                                <div className={cx('controller-user')}>
-                                    <Link to="/cart">
-                                        <button id={cx('btn-cart')}>
-                                            <FontAwesomeIcon icon={faCartPlus} />
-                                            {dataCart?.data?.length > 0 && <span>{dataCart?.data?.length}</span>}
-                                        </button>
-                                    </Link>
-                                    <Link to={dataUser._id ? '/info' : '/login'}>
-                                        <button>
-                                            <FontAwesomeIcon icon={faUser} />
-                                        </button>
-                                    </Link>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <Link
-                                    style={{ textDecoration: 'none', color: '#333' }}
-                                    to={dataUser._id ? '/info' : '/login'}
-                                    className={cx(checkHeader === 6 ? 'checkHeader' : '')}
-                                >
-                                    <li>Đăng Nhập</li>
-                                </Link>{' '}
-                                <Link
-                                    style={{ textDecoration: 'none', color: '#333' }}
-                                    to={'/register'}
-                                    className={cx(checkHeader === 7 ? 'checkHeader' : '')}
-                                >
-                                    <li>Đăng Ký</li>
-                                </Link>
+                                <li className={cx({ checkHeader: checkHeader === 6 })}>
+                                    <Link to="/login">Đăng Nhập</Link>
+                                </li>
+                                <li className={cx({ checkHeader: checkHeader === 7 })}>
+                                    <Link to="/register">Đăng Ký</Link>
+                                </li>
                             </>
                         )}
                     </ul>
-                </div>
+                </nav>
             </div>
-        </div>
+        </header>
     );
 }
 
