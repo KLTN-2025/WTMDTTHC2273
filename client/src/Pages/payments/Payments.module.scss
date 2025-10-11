@@ -1,0 +1,112 @@
+.inner {
+    width: 80%;
+    margin: 100px auto;
+    height: 100%;
+}
+
+.success {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+    width: 95%;
+    margin: 0 auto;
+    img {
+        width: 15%;
+        height: 15%;
+        margin: 0 auto;
+    }
+}
+
+.list {
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 5px;
+    padding-top: 20px;
+}
+
+.list__products {
+    padding: 10px 0px;
+    ul {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    li {
+        display: grid;
+        grid-template-columns: 79% 100px 100px;
+        align-items: center;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 10px;
+        img {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+        }
+        h4 {
+            text-align: start;
+        }
+        #price {
+            color: #ff424e;
+            font-weight: 600;
+        }
+        #product {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-self: flex-start;
+            h4 {
+                font-size: 17px;
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 350px) and (max-width: 481px) {
+    .main__dark {
+        width: 95%;
+        margin-top: 70px;
+    }
+    .list__products {
+        li {
+            grid-template-columns: 200px 50px 120px;
+        }
+    }
+    .success {
+        img {
+            width: 40%;
+        }
+    }
+}
+
+/* Điện thoại lớn (480px - 599px) */
+@media screen and (min-width: 480px) and (max-width: 599px) {
+}
+
+/* Phablet (600px - 767px) */
+@media screen and (min-width: 600px) and (max-width: 767px) {
+}
+
+/* Tablet nhỏ (768px - 899px) */
+@media screen and (min-width: 768px) and (max-width: 899px) {
+    .main__dark {
+        width: 95%;
+        margin-top: 70px;
+    }
+    .list__products {
+        li {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    .success {
+        img {
+            width: 40%;
+        }
+    }
+}
+
+/* Tablet lớn (900px - 1024px) */
+@media screen and (min-width: 900px) and (max-width: 1024px) {
+}

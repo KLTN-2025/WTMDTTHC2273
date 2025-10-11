@@ -1,0 +1,46 @@
+.wrapper {
+    display: flex;
+    justify-content: space-around;
+    height: fit-content;
+}
+
+.row-product {
+    transition: transform 0.3s;
+    position: relative;
+    text-align: center;
+    width: 300px;
+    height: fit-content;
+
+    border: 1px solid #ccc;
+
+    #img-item {
+        width: 320px;
+        background-repeat: no-repeat;
+    }
+
+    span {
+        position: absolute;
+        left: 25px;
+        bottom: 0px;
+        right: 0;
+        font-weight: 800;
+        color: #fff;
+        font-size: 20px;
+    }
+}
+
+.row-product:hover {
+    transform: scale(1.03);
+}
+
+@media only screen and (max-width: 600px) {
+    .wrapper {
+        flex-direction: column;
+        gap: 20px;
+    }
+    .row-product {
+        img {
+            width: 90%;
+        }
+    }
+}

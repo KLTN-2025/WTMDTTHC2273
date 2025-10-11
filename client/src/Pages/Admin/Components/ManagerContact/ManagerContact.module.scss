@@ -1,0 +1,111 @@
+.wrapper {
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+
+    :global {
+        .ant-table {
+            .ant-table-thead > tr > th {
+                background: #fafafa;
+                font-weight: 600;
+            }
+
+            .ant-table-tbody > tr > td {
+                vertical-align: top;
+            }
+        }
+    }
+}
+
+.message-cell {
+    max-width: 300px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.modal-content {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+
+    .contact-info {
+        margin-bottom: 12px;
+        line-height: 1.8;
+        font-size: 15px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        strong {
+            display: inline-block;
+            min-width: 100px;
+            color: #495057;
+            font-weight: 600;
+            margin-right: 8px;
+            position: relative;
+
+            &::after {
+                content: ':';
+                position: absolute;
+                right: 0;
+            }
+        }
+
+        .message-content {
+            color: #212529;
+            white-space: pre-wrap;
+            word-break: break-word;
+            padding: 12px;
+            background: #fff;
+            border-radius: 6px;
+            margin-top: 8px;
+            border: 1px solid #dee2e6;
+        }
+    }
+}
+
+.reply-textarea {
+    border-radius: 8px;
+    resize: vertical;
+    min-height: 150px;
+    padding: 12px;
+    font-size: 15px;
+    border-color: #dee2e6;
+    transition: all 0.3s ease;
+
+    &:hover {
+        border-color: #adb5bd;
+    }
+
+    &:focus {
+        border-color: #4096ff;
+        box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1);
+    }
+}
+
+:global {
+    .ant-modal-content {
+        padding: 24px !important;
+    }
+
+    .ant-modal-header {
+        margin-bottom: 24px !important;
+        padding: 0 !important;
+
+        .ant-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+    }
+
+    .ant-modal-footer {
+        margin-top: 24px !important;
+        padding: 0 !important;
+        border-top: none !important;
+    }
+}

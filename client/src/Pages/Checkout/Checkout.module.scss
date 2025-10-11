@@ -1,0 +1,24 @@
+.inner {
+    width: 90%;
+    margin: 100px auto;
+}
+
+.coupon {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    input {
+        width: 70%;
+        height: 40px;
+        padding-left: 10px;
+    }
+    button {
+        width: 30%;
+        height: 40px;
+        background-color: red;
+        border-radius: 5px;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+    }
+}

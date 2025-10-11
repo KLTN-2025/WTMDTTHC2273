@@ -1,0 +1,125 @@
+.wrapper {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 10px;
+    h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+}
+
+.product-cell {
+    min-width: 300px;
+    padding: 10px;
+
+    .product-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+
+        .product-info {
+            text-align: left;
+
+            .product-name {
+                font-weight: 500;
+                margin-bottom: 4px;
+            }
+
+            .product-quantity {
+                color: #666;
+                font-size: 14px;
+            }
+        }
+    }
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+
+    &.pending {
+        background-color: #fff3e0;
+        color: #ed6c02;
+    }
+
+    &.completed {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    &.shipping {
+        background-color: #e3f2fd;
+        color: #0288d1;
+    }
+
+    &.delivered {
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    &.cancelled {
+        background-color: #fbe9e7;
+        color: #d32f2f;
+    }
+}
+
+.action-button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    background-color: #1976d2;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+        background-color: #1565c0;
+    }
+}
+
+.price {
+    font-weight: 500;
+    color: #2e7d32;
+}
+
+.payment-type {
+    font-weight: 500;
+
+    &.COD {
+        color: #ed6c02;
+    }
+
+    &.MOMO {
+        color: #d81b60;
+    }
+
+    &.VNPAY {
+        color: #0288d1;
+    }
+}

@@ -1,0 +1,38 @@
+.content {
+    padding: 2rem;
+    margin-top: 110px;
+}
+
+.contact-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+}
+
+.contact-info {
+    .info-item {
+        margin-bottom: 1rem;
+        font-size: 16px;
+
+        .anticon {
+            margin-right: 8px;
+            color: #1890ff;
+        }
+    }
+}
+
+.contact-form {
+    :global {
+        .ant-form-item {
+            margin-bottom: 1.5rem;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .contact-container {
+        grid-template-columns: 1fr;
+    }
+}

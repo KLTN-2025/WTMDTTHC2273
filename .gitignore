@@ -1,0 +1,17 @@
+# === Environment variables ===
+.env
+client/.env
+server/.env
+
+# === Node modules & build ===
+node_modules
+dist
+build
+coverage
+*.log
+
+# === Editor / system ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

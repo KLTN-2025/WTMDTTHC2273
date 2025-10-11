@@ -1,0 +1,41 @@
+.main-content {
+    width: 70%;
+    margin: 100px auto;
+    a {
+        text-decoration: none;
+    }
+}
+
+.inner {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    color: #140c40;
+
+    h1 {
+        font-size: 20px;
+        color: red;
+    }
+    img {
+        width: 250px;
+        height: 150px;
+        object-fit: cover;
+    }
+    span {
+        padding-left: 10px;
+    }
+    &:hover {
+        color: red;
+        transition: 0.3s;
+        cursor: pointer;
+    }
+}
+
+.content {
+    p {
+        display: block;
+        max-height: 4.5em;
+        overflow: hidden;
+        mask-image: linear-gradient(to bottom, black 60%, transparent);
+    }
+}
