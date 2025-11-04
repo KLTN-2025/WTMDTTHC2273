@@ -50,9 +50,12 @@
 
 .chatbot-messages {
     flex: 1;
-    overflow-y: auto;
     padding: 16px;
     background-color: #fafafa;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    max-height: calc(500px - 140px); /* 500 = card height, 140 = header + input */
 }
 
 .chatbot-message-row {
