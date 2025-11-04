@@ -1,133 +1,178 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI('AIzaSyChaT4xn-_8XwXlpQ1flnP9q0LweFQd8FQ');
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+require('dotenv').config();
 
+const Groq = require('groq-sdk');
 const modelProduct = require('../models/product.models');
 
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// 🔹 Bản đồ danh mục & giới tính
+const CATEGORY_MAP = {
+    ao: 'Áo',
+    quan: 'Quần',
+    vay: 'Váy',
+    dam: 'Đầm',
+    phu_kien: 'Phụ kiện',
+    giay_dep: 'Giày dép',
+    tui_xach: 'Túi xách',
+};
+
+const GENDER_MAP = {
+    nam: 'Nam',
+    nu: 'Nữ',
+    unisex: 'Unisex',
+};
+
+// 🔹 Dịch category / gender
+const translate = (value, map) => map[value] || value;
+
+// 🔹 Phân tích intent (ý định câu hỏi)
+function detectIntent(question) {
+    const q = question.toLowerCase();
+    if (/tìm|có|show/.test(q)) return 'Giúp khách hàng tìm sản phẩm phù hợp. Đề xuất 3–5 sản phẩm và giải thích lý do.';
+    if (/giá|bao nhiêu/.test(q)) return 'Tư vấn về giá cả, cung cấp thông tin chính xác và so sánh sản phẩm.';
+    if (/khuyến mãi|giảm giá/.test(q)) return 'Thông báo khuyến mãi: Giảm 20% cho khách mới, freeship đơn từ 500k.';
+    if (/giao hàng|ship/.test(q))
+        return 'Giải thích chính sách giao hàng: Toàn quốc 1–3 ngày, freeship đơn từ 500k, hỗ trợ COD.';
+    if (/đổi trả|bảo hành/.test(q))
+        return 'Thông tin đổi trả: 7 ngày nếu lỗi, giữ nguyên tem mác, đổi size miễn phí trong 3 ngày.';
+    return 'Tư vấn tổng quát và hướng dẫn khách hàng mua hàng.';
+}
+
+// 🔹 Lọc sản phẩm theo nội dung
+function filterProducts(products, question) {
+    const q = question.toLowerCase();
+    let result = [...products];
+
+    const categoryKeywords = {
+        ao: ['áo', 'ao'],
+        quan: ['quần', 'quan'],
+        vay: ['váy', 'vay'],
+        dam: ['đầm', 'dam'],
+        giay_dep: ['giày', 'dép'],
+        tui_xach: ['túi', 'xách'],
+        phu_kien: ['phụ kiện'],
+    };
+
+    for (const [key, values] of Object.entries(categoryKeywords)) {
+        if (values.some((v) => q.includes(v))) {
+            result = result.filter((p) => p.category === key);
+            break;
+        }
+    }
+
+    // Lọc giới tính
+    if (q.includes('nam')) {
+        result = result.filter((p) => ['nam', 'unisex'].includes(p.gender));
+    } else if (q.includes('nữ') || q.includes('nu')) {
+        result = result.filter((p) => ['nu', 'unisex'].includes(p.gender));
+    }
+
+    // Lọc giá
+    if (/rẻ|giá thấp/.test(q)) {
+        result.sort((a, b) => a.price - b.price);
+    } else if (/đắt|cao cấp/.test(q)) {
+        result.sort((a, b) => b.price - a.price);
+    }
+
+    return result.slice(0, 10);
+}
+
+// 🔹 Format sản phẩm thành text cho AI
+function formatProduct(product) {
+    const attrs = product.attributes || {};
+    const getAttr = (key) => attrs.get?.(key) || attrs[key] || 'Chưa có thông tin';
+
+    return `- ${product.name}
+  * Loại: ${translate(product.category, CATEGORY_MAP)} ${translate(product.gender, GENDER_MAP)}
+  * Giá: ${product.price.toLocaleString('vi-VN')} VNĐ
+  * Còn lại: ${product.stock} sản phẩm
+  * Size: ${getAttr('size')}
+  * Màu: ${getAttr('color')}
+  * Chất liệu: ${getAttr('material')}
+  * Thương hiệu: ${getAttr('brand')}
+  * Mô tả: ${product.description || 'Chưa có mô tả'}`;
+}
+
+// 🔹 Tạo prompt gửi cho model
+function buildPrompt(products, question) {
+    const productInfo = products.map(formatProduct).join('\n\n');
+    const intent = detectIntent(question);
+
+    return `
+Bạn là Minh – chuyên viên tư vấn bán hàng thời trang chuyên nghiệp và thân thiện.
+
+THÔNG TIN SẢN PHẨM:
+${productInfo}
+
+CÂU HỎI KHÁCH HÀNG: "${question}"
+
+NHIỆM VỤ:
+${intent}
+
+LƯU Ý:
+- Gọi khách hàng bằng "anh/chị"
+- Giọng điệu thân thiện, chuyên nghiệp
+- Kết thúc bằng câu hỏi để tiếp tục tương tác
+- Không bịa đặt thông tin không có
+- Sử dụng emoji phù hợp 😊
+`;
+}
+
+// 🔹 Hàm chính xử lý câu hỏi
 async function askQuestion(question) {
     try {
-        // Lấy dữ liệu sản phẩm
         const products = await modelProduct.find({});
+        if (!products.length) return 'Xin lỗi, hiện tại shop chưa có sản phẩm nào. Vui lòng quay lại sau!';
 
-        if (products.length === 0) {
-            return 'Xin lỗi, hiện tại shop chưa có sản phẩm nào. Vui lòng quay lại sau!';
-        }
+        const filtered = filterProducts(products, question);
 
-        // Dịch category và gender
-        const translateCategory = (category) => {
-            const map = {
-                ao: 'Áo',
-                quan: 'Quần',
-                vay: 'Váy',
-                dam: 'Đầm',
-                phu_kien: 'Phụ kiện',
-                giay_dep: 'Giày dép',
-                tui_xach: 'Túi xách',
+        // ✅ Nếu không có sản phẩm khớp loại mà KH hỏi
+        if (filtered.length === 0) {
+            const lower = question.toLowerCase();
+            const categoryKeywords = {
+                ao: ['áo', 'ao'],
+                quan: ['quần', 'quan'],
+                vay: ['váy', 'vay'],
+                dam: ['đầm', 'dam'],
+                giay_dep: ['giày', 'dép'],
+                tui_xach: ['túi', 'xách'],
+                phu_kien: ['phụ kiện'],
             };
-            return map[category] || category;
-        };
 
-        const translateGender = (gender) => {
-            const map = { nam: 'Nam', nu: 'Nữ', unisex: 'Unisex' };
-            return map[gender] || gender;
-        };
+            let askedCategory = null;
+            for (const [key, values] of Object.entries(categoryKeywords)) {
+                if (values.some((v) => lower.includes(v))) {
+                    askedCategory = key;
+                    break;
+                }
+            }
 
-        // Lọc sản phẩm theo câu hỏi
-        const lowerQuestion = question.toLowerCase().trim();
-        let filteredProducts = [...products];
-
-        // Lọc theo danh mục
-        if (lowerQuestion.includes('áo') || lowerQuestion.includes('ao')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'ao');
-        } else if (lowerQuestion.includes('quần') || lowerQuestion.includes('quan')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'quan');
-        } else if (lowerQuestion.includes('váy') || lowerQuestion.includes('vay')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'vay');
-        } else if (lowerQuestion.includes('đầm') || lowerQuestion.includes('dam')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'dam');
-        } else if (lowerQuestion.includes('giày') || lowerQuestion.includes('dép')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'giay_dep');
-        } else if (lowerQuestion.includes('túi') || lowerQuestion.includes('xách')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'tui_xach');
-        } else if (lowerQuestion.includes('phụ kiện')) {
-            filteredProducts = filteredProducts.filter((p) => p.category === 'phu_kien');
+            if (askedCategory) {
+                return `Dạ, hiện tại shop **chưa có sản phẩm ${translate(
+                    askedCategory,
+                    CATEGORY_MAP,
+                )}** nào trong kho ạ. 🥺 Anh/chị có muốn xem các sản phẩm khác không?`;
+            }
         }
 
-        // Lọc theo giới tính
-        if (lowerQuestion.includes('nam')) {
-            filteredProducts = filteredProducts.filter((p) => p.gender === 'nam' || p.gender === 'unisex');
-        } else if (lowerQuestion.includes('nữ') || lowerQuestion.includes('nu')) {
-            filteredProducts = filteredProducts.filter((p) => p.gender === 'nu' || p.gender === 'unisex');
-        }
+        // ✅ Nếu có sản phẩm → xây prompt cho AI
+        const prompt = buildPrompt(filtered, question);
 
-        // Lọc theo giá
-        if (lowerQuestion.includes('rẻ') || lowerQuestion.includes('giá thấp')) {
-            filteredProducts = filteredProducts.sort((a, b) => a.price - b.price).slice(0, 10);
-        } else if (lowerQuestion.includes('đắt') || lowerQuestion.includes('cao cấp')) {
-            filteredProducts = filteredProducts.sort((a, b) => b.price - a.price).slice(0, 10);
-        }
+        const completion = await groq.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'Bạn là chuyên viên tư vấn bán hàng thân thiện, chuyên nghiệp, tên Minh.',
+                },
+                { role: 'user', content: prompt },
+            ],
+            temperature: 0.7,
+        });
 
-        // Format dữ liệu sản phẩm
-        const productData = filteredProducts
-            .slice(0, 10)
-            .map((product) => {
-                const size = product.attributes?.get('size') || 'Chưa có thông tin';
-                const color = product.attributes?.get('color') || 'Chưa có thông tin';
-                const material = product.attributes?.get('material') || 'Chưa có thông tin';
-                const brand = product.attributes?.get('brand') || 'Chưa có thông tin';
-
-                return `- ${product.name}
-              * Loại: ${translateCategory(product.category)} ${translateGender(product.gender)}
-              * Giá: ${product.price.toLocaleString('vi-VN')} VNĐ
-              * Còn lại: ${product.stock} sản phẩm
-              * Size: ${size}
-              * Màu: ${color}
-              * Chất liệu: ${material}
-              * Thương hiệu: ${brand}
-              * Mô tả: ${product.description || 'Chưa có mô tả'}`;
-            })
-            .join('\n\n');
-
-        // Phân tích ý định khách hàng
-        let intentPrompt = '';
-        if (lowerQuestion.includes('tìm') || lowerQuestion.includes('có') || lowerQuestion.includes('show')) {
-            intentPrompt =
-                'Nhiệm vụ: Giúp khách hàng tìm sản phẩm phù hợp. Đề xuất 3-5 sản phẩm tốt nhất và giải thích tại sao phù hợp.';
-        } else if (lowerQuestion.includes('giá') || lowerQuestion.includes('bao nhiêu')) {
-            intentPrompt = 'Nhiệm vụ: Tư vấn về giá cả. Cung cấp thông tin giá chính xác và so sánh các sản phẩm.';
-        } else if (lowerQuestion.includes('khuyến mãi') || lowerQuestion.includes('giảm giá')) {
-            intentPrompt =
-                'Nhiệm vụ: Thông báo khuyến mãi. Hiện shop có giảm giá 20% cho khách mới và free ship đơn từ 500k.';
-        } else if (lowerQuestion.includes('giao hàng') || lowerQuestion.includes('ship')) {
-            intentPrompt = 'Nhiệm vụ: Shop giao toàn quốc 1-3 ngày, free ship từ 500k, hỗ trợ COD.';
-        } else if (lowerQuestion.includes('đổi trả') || lowerQuestion.includes('bảo hành')) {
-            intentPrompt = 'Nhiệm vụ: Đổi trả trong 7 ngày nếu lỗi, giữ nguyên tem mác, đổi size free trong 3 ngày.';
-        } else {
-            intentPrompt = 'Nhiệm vụ: Tư vấn tổng quát và hướng dẫn khách hàng mua hàng.';
-        }
-
-        const prompt = `
-        Bạn là Minh - chuyên viên tư vấn bán hàng thời trang chuyên nghiệp và thân thiện.
-        
-        THÔNG TIN SẢN PHẨM:
-        ${productData}
-        
-        CÂU HỎI KHÁCH HÀNG: "${question}"
-        
-        ${intentPrompt}
-        
-        LƯU Ý:
-        - Gọi khách hàng bằng "anh/chị"
-        - Thái độ thân thiện, chuyên nghiệp
-        - Kết thúc bằng câu hỏi để tiếp tục tương tác
-        - Không bịa đặt thông tin không có
-        - Sử dụng emoji phù hợp 😊
-        `;
-
-        const result = await model.generateContent(prompt);
-        return result.response.text();
+        return completion.choices[0]?.message?.content || 'Xin lỗi, tôi chưa hiểu câu hỏi của anh/chị 😅';
     } catch (error) {
-        console.log(error);
+        console.error('[Chatbot Error]', error);
         return 'Xin lỗi anh/chị, hệ thống đang gặp sự cố. Vui lòng thử lại sau! 😅';
     }
 }
