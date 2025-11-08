@@ -2,10 +2,6 @@ import classNames from 'classnames/bind';
 
 import styles from './ItemProducts.module.scss';
 
-import img1 from '../../../assets/images/items1.jpg';
-import img3 from '../../../assets/images/items3.jpg';
-import img4 from '../../../assets/images/items4.jpeg';
-
 const cx = classNames.bind(styles);
 
 function ItemProducts() {

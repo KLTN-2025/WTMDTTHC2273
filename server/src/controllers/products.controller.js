@@ -177,39 +177,30 @@ class controllerProducts {
 
     async filterProducts(req, res) {
         try {
-            const { category, minPrice, maxPrice, searchQuery, brand, origin, sortBy } = req.query;
+            const { category, minPrice, maxPrice, searchQuery, brand, origin, gender, size, color, material, sortBy } =
+                req.query;
 
-            // Xây dựng query filter
             let filter = {};
 
-            // Filter theo category
-            if (category) {
-                filter.category = category;
-            }
+            // Danh mục
+            if (category) filter.category = category;
 
-            // Filter theo khoảng giá
+            // Giá
             if (minPrice || maxPrice) {
                 filter.price = {};
                 if (minPrice) filter.price.$gte = Number(minPrice);
                 if (maxPrice) filter.price.$lte = Number(maxPrice);
             }
 
-            // Filter theo tìm kiếm
+            // Tìm kiếm tên sản phẩm
             if (searchQuery) {
                 filter.name = { $regex: searchQuery, $options: 'i' };
             }
 
-            // Filter theo thương hiệu
-            if (brand) {
-                filter['attributes.brand'] = brand;
-            }
+            // Giới tính
+            if (gender) filter['attributes.gender'] = gender;
 
-            // Filter theo xuất xứ
-            if (origin) {
-                filter['attributes.origin'] = origin;
-            }
-
-            // Xây dựng options cho sort
+            // Sắp xếp
             let sortOptions = {};
             if (sortBy) {
                 switch (sortBy) {
@@ -224,7 +215,6 @@ class controllerProducts {
                 }
             }
 
-            // Thực hiện query với filter và sort
             const products = await modelProduct.find(filter).sort(sortOptions);
 
             new OK({
