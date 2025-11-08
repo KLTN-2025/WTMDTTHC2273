@@ -10,6 +10,7 @@ router.get('/get-cart', authUser, asyncHandler(controllerCart.getCart));
 
 router.delete('/delete-product-cart', authUser, asyncHandler(controllerCart.deleteProductCart));
 router.post('/update-info-user-cart', authUser, asyncHandler(controllerCart.updateInfoUserCart));
+router.post('/update-quantity-cart', authUser, asyncHandler(controllerCart.updateCart));
 
 router.post('/apply-coupon', authUser, asyncHandler(controllerCart.applyCoupon));
 

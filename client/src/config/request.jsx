@@ -181,6 +181,11 @@ export const requestUpdateInfoUserCart = async (data) => {
     return res.data;
 };
 
+export const requestUpdateQuantityCart = async (data) => {
+    const res = await request.post('/api/update-quantity-cart', data);
+    return res.data;
+};
+
 export const requestApplyCoupon = async (data) => {
     const res = await request.post('/api/apply-coupon', data);
     return res.data;
