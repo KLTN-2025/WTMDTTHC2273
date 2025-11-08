@@ -144,6 +144,53 @@ class controllerCart {
         new OK({ message: 'Thành công', metadata: cart }).send(res);
     }
 
+    async updateCart(req, res) {
+        try {
+            const userId = req.user?._id || req.body.userId;
+            const { productId, quantity } = req.body;
+
+            if (!userId || !productId || typeof quantity !== 'number') {
+                return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
+            }
+
+            const product = await modelProduct.findById(productId);
+            if (!product) {
+                return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+            }
+
+            const cart = await modelCart.findOne({ userId });
+            if (!cart) {
+                return res.status(404).json({ message: 'Không tìm thấy giỏ hàng' });
+            }
+
+            const productInCart = cart.product.find((item) => item.productId.toString() === productId);
+            if (!productInCart) {
+                return res.status(404).json({ message: 'Sản phẩm không có trong giỏ hàng' });
+            }
+
+            const availableStock = product.stock + productInCart.quantity;
+            if (quantity > availableStock) {
+                return res.status(400).json({ message: 'Số lượng tồn kho không đủ' });
+            }
+
+            await modelProduct.updateOne({ _id: productId }, { $inc: { stock: -quantity + productInCart.quantity } });
+
+            productInCart.quantity = quantity;
+            cart.totalPrice = await calcTotal(cart.product);
+            await cart.save();
+
+            res.status(200).json({
+                message: 'Cập nhật giỏ hàng thành công',
+                metadata: cart,
+            });
+        } catch (err) {
+            res.status(500).json({
+                message: 'Lỗi khi cập nhật giỏ hàng',
+                error: err.message,
+            });
+        }
+    }
+
     async applyCoupon(req, res) {
         try {
             const { nameCoupon } = req.body;
@@ -228,6 +275,18 @@ class controllerCart {
             throw error;
         }
     }
+}
+
+// Hàm tính tổng tiền
+async function calcTotal(productList) {
+    let total = 0;
+    for (const item of productList) {
+        const product = await modelProduct.findById(item.productId);
+        if (product) {
+            total += product.price * item.quantity;
+        }
+    }
+    return total;
 }
 
 module.exports = new controllerCart();
