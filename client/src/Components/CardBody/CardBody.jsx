@@ -7,18 +7,21 @@ const cx = classNames.bind(styles);
 function CardBody({ item }) {
     return (
         <div className={cx('wrapper')}>
-            <Link to={`/product/${item._id}`}>
-                <img src={item.images[0]} alt="" />
+            <Link to={`/product/${item._id}`} className={cx('imageWrapper')}>
+                <img src={item.images[0]} alt={item.name} />
             </Link>
-            <div>
+
+            <div className={cx('info')}>
                 <h4>{item.name}</h4>
-                <p>Giá : {item.price.toLocaleString('it-IT', { style: 'currency', currency: 'VND' })}</p>
+                <p className={cx('price')}>
+                    Giá: {item.price.toLocaleString('it-IT', { style: 'currency', currency: 'VND' })}
+                </p>
                 {item.attributes.brand ? (
-                    <p>Thương hiệu : {item?.attributes?.brand}</p>
+                    <p className={cx('brand')}>Thương hiệu: {item.attributes.brand}</p>
                 ) : (
-                    <p> Mùi hương : {item?.attributes?.scent}</p>
+                    <p className={cx('brand')}>Mùi hương: {item.attributes.scent}</p>
                 )}
-                <p>Số lượng còn : {item.stock} sản phẩm</p>
+                <p className={cx('stock')}>Số lượng còn: {item.stock} sản phẩm</p>
             </div>
         </div>
     );

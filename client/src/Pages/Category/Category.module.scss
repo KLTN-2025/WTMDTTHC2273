@@ -29,13 +29,9 @@
     min-width: 0;
 }
 
-@media (max-width: 768px) {
-    .main {
-        flex-direction: column;
-    }
-
-    .left {
-        width: 100%;
-        position: static;
-    }
+.list {
+    display: grid;
+    grid-template-columns: repeat(3, 300px);
+    gap: 20px;
+    justify-content: center;
 }

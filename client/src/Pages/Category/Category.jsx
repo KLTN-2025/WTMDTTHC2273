@@ -12,12 +12,10 @@ import {
     TextField,
     Slider,
     Stack,
-    Button,
     Divider,
 } from '@mui/material';
 import { requestGetProducts, requestFilterProducts } from '../../config/request';
 import CardBody from '../../Components/CardBody/CardBody';
-
 import Header from '../../Components/Header/Header';
 import Footer from '../../Components/Footer/Footer';
 
@@ -26,14 +24,23 @@ const cx = classNames.bind(styles);
 function Category() {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [priceRange, setPriceRange] = useState([0, 10000000]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sortBy, setSortBy] = useState('default');
-    const [selectedBrand, setSelectedBrand] = useState('');
-    const [selectedOrigin, setSelectedOrigin] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Gom tất cả các filters vào 1 state
+    const [filters, setFilters] = useState({
+        category: '',
+        brand: '',
+        origin: '',
+        gender: '',
+        size: '',
+        color: '',
+        material: '',
+        sortBy: 'default',
+        searchQuery: '',
+        priceRange: [0, 10000000],
+    });
+
+    // Danh mục cơ bản
     const categories = [
         { value: 'ao', label: 'Áo' },
         { value: 'quan', label: 'Quần' },
@@ -50,24 +57,20 @@ function Category() {
         { value: 'unisex', label: 'Unisex' },
     ];
 
-    const [selectedGender, setSelectedGender] = useState('');
-    const [selectedSize, setSelectedSize] = useState('');
-    const [selectedColor, setSelectedColor] = useState('');
-    const [selectedMaterial, setSelectedMaterial] = useState('');
-
     const sortOptions = [
         { value: 'default', label: 'Mặc định' },
         { value: 'price_asc', label: 'Giá: Thấp đến cao' },
         { value: 'price_desc', label: 'Giá: Cao đến thấp' },
     ];
 
+    // Fetch tất cả sản phẩm ban đầu
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 const response = await requestGetProducts();
-                const productsData = Array.isArray(response.metadata) ? response.metadata : [];
-                setProducts(productsData);
-                setFilteredProducts(productsData);
+                const data = Array.isArray(response.metadata) ? response.metadata : [];
+                setProducts(data);
+                setFilteredProducts(data);
             } catch (error) {
                 console.error('Error fetching products:', error);
                 setProducts([]);
@@ -77,93 +80,45 @@ function Category() {
         fetchProducts();
     }, []);
 
-    // Lấy danh sách thương hiệu và xuất xứ từ sản phẩm
-    const brands = [...new Set(products.map((product) => product.attributes?.brand).filter(Boolean))];
-    const origins = [...new Set(products.map((product) => product.attributes?.origin).filter(Boolean))];
+    // Lấy danh sách unique từ dữ liệu
+    const brands = [...new Set(products.map((p) => p.attributes?.brand).filter(Boolean))];
+    const origins = [...new Set(products.map((p) => p.attributes?.origin).filter(Boolean))];
+    const sizes = [...new Set(products.map((p) => p.attributes?.size).filter(Boolean))];
+    const colors = [...new Set(products.map((p) => p.attributes?.color).filter(Boolean))];
+    const materials = [...new Set(products.map((p) => p.attributes?.material).filter(Boolean))];
 
-    // Lấy danh sách các thuộc tính từ sản phẩm
-    const sizes = [...new Set(products.map((product) => product.attributes?.size).filter(Boolean))];
-    const colors = [...new Set(products.map((product) => product.attributes?.color).filter(Boolean))];
-    const materials = [...new Set(products.map((product) => product.attributes?.material).filter(Boolean))];
-
-    const fetchFilteredProducts = async () => {
-        try {
-            setLoading(true);
-            const params = {
-                category: selectedCategory,
-                minPrice: priceRange[0],
-                maxPrice: priceRange[1],
-                searchQuery,
-                brand: selectedBrand,
-                gender: selectedGender,
-                size: selectedSize,
-                color: selectedColor,
-                material: selectedMaterial,
-                sortBy,
-            };
-
-            const response = await requestFilterProducts(params);
-            setFilteredProducts(response.metadata);
-        } catch (error) {
-            console.error('Error filtering products:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Lọc sản phẩm khi filters thay đổi
     useEffect(() => {
+        const fetchFilteredProducts = async () => {
+            try {
+                setLoading(true);
+                const response = await requestFilterProducts({
+                    category: filters.category,
+                    minPrice: filters.priceRange[0],
+                    maxPrice: filters.priceRange[1],
+                    searchQuery: filters.searchQuery,
+                    brand: filters.brand,
+                    origin: filters.origin,
+                    gender: filters.gender,
+                    size: filters.size,
+                    color: filters.color,
+                    material: filters.material,
+                    sortBy: filters.sortBy,
+                });
+                setFilteredProducts(response.metadata || []);
+            } catch (error) {
+                console.error('Error filtering products:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchFilteredProducts();
-    }, [
-        selectedCategory,
-        priceRange,
-        searchQuery,
-        sortBy,
-        selectedBrand,
-        selectedGender,
-        selectedSize,
-        selectedColor,
-        selectedMaterial,
-    ]);
+    }, [filters]);
 
-    const handleCategoryChange = (event) => {
-        setSelectedCategory(event.target.value);
-    };
-
-    const handlePriceChange = (event, newValue) => {
-        setPriceRange(newValue);
-    };
-
-    const handleSearchChange = (event) => {
-        setSearchQuery(event.target.value);
-    };
-
-    const handleSortChange = (event) => {
-        setSortBy(event.target.value);
-    };
-
-    const handleBrandChange = (event) => {
-        setSelectedBrand(event.target.value);
-    };
-
-    const handleOriginChange = (event) => {
-        setSelectedOrigin(event.target.value);
-    };
-
-    // Thêm handlers cho các bộ lọc mới
-    const handleGenderChange = (event) => {
-        setSelectedGender(event.target.value);
-    };
-
-    const handleSizeChange = (event) => {
-        setSelectedSize(event.target.value);
-    };
-
-    const handleColorChange = (event) => {
-        setSelectedColor(event.target.value);
-    };
-
-    const handleMaterialChange = (event) => {
-        setSelectedMaterial(event.target.value);
+    // Cập nhật filter chung
+    const handleFilterChange = (key, value) => {
+        setFilters((prev) => ({ ...prev, [key]: value }));
     };
 
     return (
@@ -171,14 +126,21 @@ function Category() {
             <header>
                 <Header />
             </header>
+
             <main className={cx('main')}>
-                <div className={cx('left')}>
+                {/* LEFT FILTER SIDEBAR */}
+                <aside className={cx('left')}>
                     <Stack spacing={3} sx={{ p: 2 }}>
                         <Typography variant="h6">Bộ lọc</Typography>
 
+                        {/* Sort */}
                         <FormControl fullWidth>
                             <InputLabel>Sắp xếp theo</InputLabel>
-                            <Select value={sortBy} label="Sắp xếp theo" onChange={handleSortChange}>
+                            <Select
+                                value={filters.sortBy}
+                                label="Sắp xếp theo"
+                                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                            >
                                 {sortOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.label}
@@ -189,142 +151,184 @@ function Category() {
 
                         <Divider />
 
+                        {/* Danh mục */}
                         <FormControl fullWidth>
                             <InputLabel>Danh mục</InputLabel>
-                            <Select value={selectedCategory} label="Danh mục" onChange={handleCategoryChange}>
+                            <Select
+                                value={filters.category}
+                                label="Danh mục"
+                                onChange={(e) => handleFilterChange('category', e.target.value)}
+                            >
                                 <MenuItem value="">Tất cả</MenuItem>
-                                {categories.map((category) => (
-                                    <MenuItem key={category.value} value={category.value}>
-                                        {category.label}
+                                {categories.map((cat) => (
+                                    <MenuItem key={cat.value} value={cat.value}>
+                                        {cat.label}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
 
+                        {/* Thương hiệu */}
                         {brands.length > 0 && (
                             <FormControl fullWidth>
                                 <InputLabel>Thương hiệu</InputLabel>
-                                <Select value={selectedBrand} label="Thương hiệu" onChange={handleBrandChange}>
+                                <Select
+                                    value={filters.brand}
+                                    label="Thương hiệu"
+                                    onChange={(e) => handleFilterChange('brand', e.target.value)}
+                                >
                                     <MenuItem value="">Tất cả</MenuItem>
-                                    {brands.map((brand) => (
-                                        <MenuItem key={brand} value={brand}>
-                                            {brand}
+                                    {brands.map((b) => (
+                                        <MenuItem key={b} value={b}>
+                                            {b}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         )}
 
+                        {/* Xuất xứ */}
                         {origins.length > 0 && (
                             <FormControl fullWidth>
                                 <InputLabel>Xuất xứ</InputLabel>
-                                <Select value={selectedOrigin} label="Xuất xứ" onChange={handleOriginChange}>
+                                <Select
+                                    value={filters.origin}
+                                    label="Xuất xứ"
+                                    onChange={(e) => handleFilterChange('origin', e.target.value)}
+                                >
                                     <MenuItem value="">Tất cả</MenuItem>
-                                    {origins.map((origin) => (
-                                        <MenuItem key={origin} value={origin}>
-                                            {origin}
+                                    {origins.map((o) => (
+                                        <MenuItem key={o} value={o}>
+                                            {o}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         )}
 
+                        {/* Giới tính */}
                         <FormControl fullWidth>
                             <InputLabel>Giới tính</InputLabel>
-                            <Select value={selectedGender} label="Giới tính" onChange={handleGenderChange}>
+                            <Select
+                                value={filters.gender}
+                                label="Giới tính"
+                                onChange={(e) => handleFilterChange('gender', e.target.value)}
+                            >
                                 <MenuItem value="">Tất cả</MenuItem>
-                                {genders.map((gender) => (
-                                    <MenuItem key={gender.value} value={gender.value}>
-                                        {gender.label}
+                                {genders.map((g) => (
+                                    <MenuItem key={g.value} value={g.value}>
+                                        {g.label}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
 
+                        {/* Kích thước */}
                         {sizes.length > 0 && (
                             <FormControl fullWidth>
                                 <InputLabel>Kích thước</InputLabel>
-                                <Select value={selectedSize} label="Kích thước" onChange={handleSizeChange}>
+                                <Select
+                                    value={filters.size}
+                                    label="Kích thước"
+                                    onChange={(e) => handleFilterChange('size', e.target.value)}
+                                >
                                     <MenuItem value="">Tất cả</MenuItem>
-                                    {sizes.map((size) => (
-                                        <MenuItem key={size} value={size}>
-                                            {size}
+                                    {sizes.map((s) => (
+                                        <MenuItem key={s} value={s}>
+                                            {s}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         )}
 
+                        {/* Màu sắc */}
                         {colors.length > 0 && (
                             <FormControl fullWidth>
                                 <InputLabel>Màu sắc</InputLabel>
-                                <Select value={selectedColor} label="Màu sắc" onChange={handleColorChange}>
+                                <Select
+                                    value={filters.color}
+                                    label="Màu sắc"
+                                    onChange={(e) => handleFilterChange('color', e.target.value)}
+                                >
                                     <MenuItem value="">Tất cả</MenuItem>
-                                    {colors.map((color) => (
-                                        <MenuItem key={color} value={color}>
-                                            {color}
+                                    {colors.map((c) => (
+                                        <MenuItem key={c} value={c}>
+                                            {c}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         )}
 
+                        {/* Chất liệu */}
                         {materials.length > 0 && (
                             <FormControl fullWidth>
                                 <InputLabel>Chất liệu</InputLabel>
-                                <Select value={selectedMaterial} label="Chất liệu" onChange={handleMaterialChange}>
+                                <Select
+                                    value={filters.material}
+                                    label="Chất liệu"
+                                    onChange={(e) => handleFilterChange('material', e.target.value)}
+                                >
                                     <MenuItem value="">Tất cả</MenuItem>
-                                    {materials.map((material) => (
-                                        <MenuItem key={material} value={material}>
-                                            {material}
+                                    {materials.map((m) => (
+                                        <MenuItem key={m} value={m}>
+                                            {m}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         )}
 
+                        {/* Khoảng giá */}
                         <Box>
                             <Typography gutterBottom>Khoảng giá</Typography>
                             <Slider
-                                value={priceRange}
-                                onChange={handlePriceChange}
+                                value={filters.priceRange}
+                                onChange={(e, val) => handleFilterChange('priceRange', val)}
                                 valueLabelDisplay="auto"
                                 min={0}
                                 max={10000000}
                                 step={100000}
                             />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography>{priceRange[0].toLocaleString()}đ</Typography>
-                                <Typography>{priceRange[1].toLocaleString()}đ</Typography>
+                                <Typography>{filters.priceRange[0].toLocaleString()}đ</Typography>
+                                <Typography>{filters.priceRange[1].toLocaleString()}đ</Typography>
                             </Box>
                         </Box>
 
+                        {/* Search */}
                         <TextField
                             fullWidth
                             label="Tìm kiếm sản phẩm"
-                            value={searchQuery}
-                            onChange={handleSearchChange}
+                            value={filters.searchQuery}
+                            onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
                         />
                     </Stack>
-                </div>
+                </aside>
 
-                <div className={cx('right')}>
-                    <Grid container spacing={3} sx={{ p: 2 }}>
+                {/* RIGHT PRODUCT LIST */}
+                <section className={cx('right')}>
+                    <Grid container spacing={2}>
                         {loading ? (
                             <Grid item xs={12}>
-                                <Typography>Đang tải...</Typography>
+                                <Typography textAlign="center">Đang tải...</Typography>
                             </Grid>
-                        ) : (
-                            Array.isArray(filteredProducts) &&
+                        ) : filteredProducts.length > 0 ? (
                             filteredProducts.map((product) => (
                                 <Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
                                     <CardBody item={product} />
                                 </Grid>
                             ))
+                        ) : (
+                            <Grid item xs={12}>
+                                <Typography textAlign="center">Không tìm thấy sản phẩm phù hợp 😢</Typography>
+                            </Grid>
                         )}
                     </Grid>
-                </div>
+                </section>
             </main>
+
             <footer>
                 <Footer />
             </footer>
