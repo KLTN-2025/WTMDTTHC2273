@@ -7,6 +7,8 @@ const modelPreviewProduct = require('../models/previewProduct.model');
 const { BadRequestError } = require('../core/error.response');
 const { OK } = require('../core/success.response');
 
+const https = require('https');
+
 const axios = require('axios');
 const crypto = require('crypto');
 const { VNPay, ignoreLogger, ProductCode, VnpLocale, dateFormat } = require('vnpay');
@@ -44,71 +46,102 @@ class controllerPayments {
             new OK({ message: 'Thanh toán thành công', metadata: newPayment._id }).send(res);
         }
         if (typePayment === 'MOMO') {
-            var partnerCode = 'MOMO';
-            var accessKey = 'F8BBA842ECF85';
-            var secretkey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-            var requestId = partnerCode + new Date().getTime();
-            var orderId = requestId;
-            var orderInfo = `thanh toan ${findCart._id}`; // nội dung giao dịch thanh toán
-            var redirectUrl = 'http://localhost:3000/api/check-payment-momo'; // 8080
-            var ipnUrl = 'http://localhost:3000/api/check-payment-momo';
-            var amount = findCart.totalPrice;
-            var requestType = 'captureWallet';
-            var extraData = ''; //pass empty value if your merchant does not have stores
+            const data = new Promise(async (resolve, reject) => {
+                const accessKey = 'F8BBA842ECF85';
+                const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
+                const partnerCode = 'MOMO';
+                const orderId = partnerCode + new Date().getTime();
+                const requestId = orderId;
+                const orderInfo = `Thanh toan don hang ${findCart._id}`;
+                const redirectUrl = 'http://localhost:3000/api/check-payment-momo';
+                const ipnUrl = 'http://localhost:3000/api/check-payment-momo';
+                const requestType = 'payWithMethod';
+                const amount = findCart.totalPrice;
+                const extraData = '';
 
-            var rawSignature =
-                'accessKey=' +
-                accessKey +
-                '&amount=' +
-                amount +
-                '&extraData=' +
-                extraData +
-                '&ipnUrl=' +
-                ipnUrl +
-                '&orderId=' +
-                orderId +
-                '&orderInfo=' +
-                orderInfo +
-                '&partnerCode=' +
-                partnerCode +
-                '&redirectUrl=' +
-                redirectUrl +
-                '&requestId=' +
-                requestId +
-                '&requestType=' +
-                requestType;
-            //puts raw signature
+                const rawSignature =
+                    'accessKey=' +
+                    accessKey +
+                    '&amount=' +
+                    amount +
+                    '&extraData=' +
+                    extraData +
+                    '&ipnUrl=' +
+                    ipnUrl +
+                    '&orderId=' +
+                    orderId +
+                    '&orderInfo=' +
+                    orderInfo +
+                    '&partnerCode=' +
+                    partnerCode +
+                    '&redirectUrl=' +
+                    redirectUrl +
+                    '&requestId=' +
+                    requestId +
+                    '&requestType=' +
+                    requestType;
 
-            //signature
-            var signature = crypto.createHmac('sha256', secretkey).update(rawSignature).digest('hex');
+                const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
 
-            //json object send to MoMo endpoint
-            const requestBody = JSON.stringify({
-                partnerCode: partnerCode,
-                accessKey: accessKey,
-                requestId: requestId,
-                amount: amount,
-                orderId: orderId,
-                orderInfo: orderInfo,
-                redirectUrl: redirectUrl,
-                ipnUrl: ipnUrl,
-                extraData: extraData,
-                requestType: requestType,
-                signature: signature,
-                lang: 'en',
+                const requestBody = JSON.stringify({
+                    partnerCode,
+                    partnerName: 'Test',
+                    storeId: 'MomoTestStore',
+                    requestId,
+                    amount,
+                    orderId,
+                    orderInfo,
+                    redirectUrl,
+                    ipnUrl,
+                    lang: 'vi',
+                    requestType,
+                    autoCapture: true,
+                    extraData,
+                    orderGroupId: '',
+                    signature,
+                });
+
+                const options = {
+                    hostname: 'test-payment.momo.vn',
+                    port: 443,
+                    path: '/v2/gateway/api/create',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(requestBody),
+                    },
+                };
+
+                const req = https.request(options, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                    });
+                    res.on('end', () => {
+                        try {
+                            resolve(JSON.parse(data));
+                        } catch (err) {
+                            reject(err);
+                        }
+                    });
+                });
+
+                req.on('error', (e) => reject(e));
+                req.write(requestBody);
+                req.end();
             });
 
-            const response = await axios.post('https://test-payment.momo.vn/v2/gateway/api/create', requestBody, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+            const { payUrl } = await data;
+
+            return res.status(201).json({
+                message: 'success',
+                metadata: payUrl,
             });
-            new OK({ message: 'Thanh toán thông báo', metadata: response.data }).send(res);
         }
         if (typePayment === 'VNPAY') {
             const vnpay = new VNPay({
                 tmnCode: 'DH2F13SW',
-                secureSecret: 'NXZM3DWFR0LC4R5VBK85OJZS1UE9KI6F',
+                secureSecret: '7VJPG70RGPOWFO47VSBT29WPDYND0EJG',
                 vnpayHost: 'https://sandbox.vnpayment.vn',
                 testMode: true, // tùy chọn
                 hashAlgorithm: 'SHA512', // tùy chọn
@@ -134,7 +167,7 @@ class controllerPayments {
     async checkPaymentMomo(req, res, next) {
         const { orderInfo, resultCode } = req.query;
         if (resultCode === '0') {
-            const result = orderInfo.split(' ')[2];
+            const result = orderInfo.split(' ')[4];
             const findCart = await modelCart.findOne({ _id: result });
             const newPayment = new modelPayments({
                 userId: findCart.userId,
