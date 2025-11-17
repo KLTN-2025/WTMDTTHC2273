@@ -78,17 +78,21 @@ function Header() {
                         <FontAwesomeIcon icon={faSearch} />
                     </div>
 
-                    {dataSearch.length > 0 && (
-                        <div className={cx('search-result')}>
-                            {dataSearch.map((item) => (
-                                <Link key={item._id} to={`/product/${item._id}`} className={cx('result-item')}>
-                                    <img src={item.images?.[0]} alt={item.name} />
-                                    <div>
-                                        <h5>{item.name}</h5>
-                                        <span>{item.price?.toLocaleString()} đ</span>
-                                    </div>
-                                </Link>
-                            ))}
+                    {searchValue.trim() && (
+                        <div className={cx('result')}>
+                            {dataSearch.length > 0 ? (
+                                dataSearch.map((item) => (
+                                    <Link key={item._id} to={`/product/${item._id}`} className={cx('result-item')}>
+                                        <img src={item.images?.[0]} alt={item.name} className={cx('img-result')} />
+                                        <div>
+                                            <h5>{item.name}</h5>
+                                            <span>{item.price?.toLocaleString()} đ</span>
+                                        </div>
+                                    </Link>
+                                ))
+                            ) : (
+                                <div className={cx('no-result')}>Hiện không có sản phẩm nào phù hợp.</div>
+                            )}
                         </div>
                     )}
                 </div>
