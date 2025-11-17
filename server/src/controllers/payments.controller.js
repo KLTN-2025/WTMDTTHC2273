@@ -41,6 +41,9 @@ class controllerPayments {
                 nameCoupon: findCart.nameCoupon,
             });
             await newPayment.save();
+            if (findCart.nameCoupon) {
+                await modelCoupon.updateOne({ nameCoupon: findCart.nameCoupon }, { $inc: { usedCount: 1 } });
+            }
             await findCart.deleteOne();
 
             new OK({ message: 'Thanh toán thành công', metadata: newPayment._id }).send(res);
@@ -181,6 +184,9 @@ class controllerPayments {
                 nameCoupon: findCart.nameCoupon,
             });
             await newPayment.save();
+            if (findCart.nameCoupon) {
+                await modelCoupon.updateOne({ nameCoupon: findCart.nameCoupon }, { $inc: { usedCount: 1 } });
+            }
             await findCart.deleteOne();
             return res.redirect(`http://localhost:5173/payment/${newPayment._id}`);
         }
@@ -203,6 +209,9 @@ class controllerPayments {
                 nameCoupon: findCart.nameCoupon,
             });
             await newPayment.save();
+            if (findCart.nameCoupon) {
+                await modelCoupon.updateOne({ nameCoupon: findCart.nameCoupon }, { $inc: { usedCount: 1 } });
+            }
             await findCart.deleteOne();
             return res.redirect(`http://localhost:5173/payment/${newPayment._id}`);
         }

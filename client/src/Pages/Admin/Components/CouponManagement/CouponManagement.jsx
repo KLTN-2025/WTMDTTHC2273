@@ -185,6 +185,7 @@ function CouponManagement() {
                 </div>
             ),
         },
+
         {
             title: 'Giảm giá',
             dataIndex: 'discount',
@@ -195,17 +196,36 @@ function CouponManagement() {
                 </Tag>
             ),
         },
+
         {
             title: 'Số lượng còn lại',
             key: 'quantity',
             render: (_, record) => {
+                const remaining = record.quantity - (record.usedCount || 0);
                 return (
                     <div className={cx('usage-info')}>
-                        <span>{record.quantity} lượt sử dụng</span>
+                        <span>
+                            {remaining}/{record.quantity}
+                        </span>
                     </div>
                 );
             },
         },
+
+        {
+            title: 'Tổng tiền đã giảm',
+            key: 'totalDiscount',
+            render: (_, record) => {
+                const total = (record.usedCount || 0) * record.discount;
+                return (
+                    <div className={cx('min-price')}>
+                        <DollarOutlined className={cx('price-icon')} />
+                        {total.toLocaleString('vi-VN')}đ
+                    </div>
+                );
+            },
+        },
+
         {
             title: 'Thời gian',
             key: 'time',
@@ -218,6 +238,7 @@ function CouponManagement() {
                 </div>
             ),
         },
+
         {
             title: 'Đơn tối thiểu',
             dataIndex: 'minPrice',

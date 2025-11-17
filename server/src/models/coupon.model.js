@@ -11,6 +11,7 @@ const modelCoupon = new Schema(
         endDate: { type: Date, required: true },
         productUsed: [{ type: String, required: true }],
         minPrice: { type: Number, required: true },
+        usedCount: { type: Number, default: 0 },
     },
     {
         timestamps: true,
