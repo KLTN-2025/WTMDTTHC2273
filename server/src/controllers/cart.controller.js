@@ -241,14 +241,16 @@ class controllerCart {
 
                 discountAmount = findCoupon.discount;
             }
-            const totalPriProduct = await Promise.all(
-                dataCart.product.map(async (item) => {
-                    const product = await modelProduct.findById(item.productId);
-                    return product.price * item.quantity;
-                }),
-            );
+            const totalPriProduct = (
+                await Promise.all(
+                    dataCart.product.map(async (item) => {
+                        const product = await modelProduct.findById(item.productId);
+                        return product.price * item.quantity;
+                    }),
+                )
+            ).reduce((acc, cur) => acc + cur, 0);
 
-            // Tính toán tổng tiền sau khi giảm giá
+            // Tính tổng tiền sau giảm giá
             const newTotal = Math.max(0, totalPriProduct - discountAmount);
 
             // Cập nhật giỏ hàng

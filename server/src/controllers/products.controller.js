@@ -149,9 +149,11 @@ class controllerProducts {
         const currentDate = new Date();
         const dataCoupon = await modelCoupon.find({
             minPrice: { $lte: product.price },
-            quantity: { $gt: 0 },
             startDate: { $lte: currentDate },
             endDate: { $gte: currentDate },
+            $expr: {
+                $lt: ['$usedCount', '$quantity'], // usedCount < quantity
+            },
             $or: [{ productUsed: 'all' }, { productUsed: product._id.toString() }],
         });
 
