@@ -15,7 +15,7 @@ import toast, { Toaster } from 'react-hot-toast';
 const cx = classNames.bind(styles);
 
 function Checkout() {
-    const { dataCart, fetchCart } = useStore();
+    const { dataCart, fetchCart, dataUser } = useStore();
     const [form] = Form.useForm();
     const navigate = useNavigate();
 
@@ -91,6 +91,23 @@ function Checkout() {
 
         return () => clearTimeout(handler);
     }, [formData]);
+
+    useEffect(() => {
+        if (dataUser) {
+            const defaultValues = {
+                fullName: dataUser.fullName || '',
+                phone: dataUser.phone || '',
+                email: dataUser.email || '',
+                address: dataUser.address || '',
+            };
+
+            // Set vào Form
+            form.setFieldsValue(defaultValues);
+
+            // Set vào state formData để auto-update cart info
+            setFormData(defaultValues);
+        }
+    }, [dataUser, form]);
 
     // ---------------- HANDLE PAYMENT ---------------- //
     const handlePayment = useCallback(

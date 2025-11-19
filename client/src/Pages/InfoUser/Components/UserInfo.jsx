@@ -20,6 +20,7 @@ function UserInfo({ userData, onChangePassword }) {
         form.setFieldsValue({
             fullName: userData?.fullName,
             email: userData?.email,
+            address: userData?.address,
             phone: userData?.phone,
         });
         setEditing(true);
@@ -68,13 +69,18 @@ function UserInfo({ userData, onChangePassword }) {
                             <Text> {userData?.email}</Text>
                         </div>
                         <div className={cx('detail-item')}>
+                            <Text strong>Địa chỉ:</Text>
+                            <Text>{userData?.address}</Text>
+                        </div>
+                        <div className={cx('detail-item')}>
                             <Text strong>Số Điện Thoại:</Text>
                             <Text>{userData?.phone}</Text>
                         </div>
-
-                        <Button onClick={onChangePassword} className={cx('change-password-btn')}>
-                            Đổi Mật Khẩu
-                        </Button>
+                        {userData.typeLogin === 'email' && (
+                            <Button onClick={onChangePassword} className={cx('change-password-btn')}>
+                                Đổi Mật Khẩu
+                            </Button>
+                        )}
                     </div>
                 </Card>
             ) : (
@@ -91,6 +97,7 @@ function UserInfo({ userData, onChangePassword }) {
                         initialValues={{
                             fullName: userData?.fullName,
                             email: userData?.email,
+                            address: userData?.address,
                             phone: userData?.phone,
                         }}
                     >
@@ -111,6 +118,14 @@ function UserInfo({ userData, onChangePassword }) {
                             ]}
                         >
                             <Input placeholder="Nhập email" disabled />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="address"
+                            label="Địa chỉ"
+                            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
+                        >
+                            <Input placeholder="Nhập địa chỉ" />
                         </Form.Item>
 
                         <Form.Item
