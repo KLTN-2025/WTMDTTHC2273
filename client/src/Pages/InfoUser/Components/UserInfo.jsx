@@ -76,10 +76,11 @@ function UserInfo({ userData, onChangePassword }) {
                             <Text strong>Số Điện Thoại:</Text>
                             <Text>{userData?.phone}</Text>
                         </div>
-
-                        <Button onClick={onChangePassword} className={cx('change-password-btn')}>
-                            Đổi Mật Khẩu
-                        </Button>
+                        {userData.typeLogin === 'email' && (
+                            <Button onClick={onChangePassword} className={cx('change-password-btn')}>
+                                Đổi Mật Khẩu
+                            </Button>
+                        )}
                     </div>
                 </Card>
             ) : (
