@@ -422,299 +422,136 @@ class controllerUsers {
     async getStatistics(req, res) {
         try {
             const { startDate, endDate } = req.query;
+
+            // Chuẩn hóa ngày lọc
             const start = startDate ? new Date(startDate) : new Date();
             const end = endDate ? new Date(endDate) : new Date();
-
-            // Đảm bảo startDate và endDate là đầu ngày và cuối ngày
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);
 
-            // Lấy models
+            const today = new Date();
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+
             const User = require('../models/users.model');
             const Product = require('../models/product.models');
             const Payment = require('../models/payments.model');
 
-            // 1. Tổng số người dùng
-            const totalUsers = await User.countDocuments();
-
-            // 2. Tổng số đơn hàng mới (đơn hàng trong khoảng thời gian đã chọn)
-            const newOrders = await Payment.countDocuments({
-                createdAt: { $gte: start, $lte: end },
-            });
-
-            // 3. Tổng doanh thu hôm nay
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            const todayPayments = await Payment.find({
-                createdAt: { $gte: today, $lt: tomorrow },
-                statusOrder: { $in: ['completed', 'delivered'] },
-            });
-
-            const todayRevenue = todayPayments.reduce((total, payment) => total + payment.totalPrice, 0);
-
-            // 4. Tổng số sản phẩm
-            const totalProducts = await Product.countDocuments();
-
-            // 5. Tỷ lệ chuyển đổi (giả định: số đơn hàng thành công / tổng số người dùng * 100)
-            const completedOrders = await Payment.countDocuments({
-                statusOrder: { $in: ['completed', 'delivered'] },
-            });
-            const conversion = Math.round((completedOrders / totalUsers) * 100) || 0;
-
-            // 6. Tăng trưởng người dùng (% so với tháng trước)
-            const lastMonth = new Date();
-            lastMonth.setMonth(lastMonth.getMonth() - 1);
-
-            const usersThisMonth = await User.countDocuments({
-                createdAt: { $gte: new Date(today.getFullYear(), today.getMonth(), 1) },
-            });
-
-            const usersLastMonth = await User.countDocuments({
-                createdAt: {
-                    $gte: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1),
-                    $lt: new Date(today.getFullYear(), today.getMonth(), 1),
-                },
-            });
-
-            const userGrowth =
-                usersLastMonth > 0
-                    ? Math.round(((usersThisMonth - usersLastMonth) / usersLastMonth) * 100 * 10) / 10
-                    : 0;
-
-            // 7. Tăng trưởng đơn hàng (% so với tháng trước)
-            const ordersThisMonth = await Payment.countDocuments({
-                createdAt: { $gte: new Date(today.getFullYear(), today.getMonth(), 1) },
-            });
-
-            const ordersLastMonth = await Payment.countDocuments({
-                createdAt: {
-                    $gte: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1),
-                    $lt: new Date(today.getFullYear(), today.getMonth(), 1),
-                },
-            });
-
-            const orderGrowth =
-                ordersLastMonth > 0
-                    ? Math.round(((ordersThisMonth - ordersLastMonth) / ordersLastMonth) * 100 * 10) / 10
-                    : 0;
-
-            // 8. Tăng trưởng doanh thu (% so với tháng trước)
-            const revenueThisMonth = await Payment.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: new Date(today.getFullYear(), today.getMonth(), 1) },
-                        statusOrder: { $in: ['completed', 'delivered'] },
-                    },
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: '$totalPrice' },
-                    },
-                },
-            ]);
-
-            const revenueLastMonth = await Payment.aggregate([
-                {
-                    $match: {
-                        createdAt: {
-                            $gte: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1),
-                            $lt: new Date(today.getFullYear(), today.getMonth(), 1),
-                        },
-                        statusOrder: { $in: ['completed', 'delivered'] },
-                    },
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: '$totalPrice' },
-                    },
-                },
-            ]);
-
-            const totalThisMonth = revenueThisMonth.length > 0 ? revenueThisMonth[0].total : 0;
-            const totalLastMonth = revenueLastMonth.length > 0 ? revenueLastMonth[0].total : 0;
-
-            const revenueGrowth =
-                totalLastMonth > 0
-                    ? Math.round(((totalThisMonth - totalLastMonth) / totalLastMonth) * 100 * 10) / 10
-                    : 0;
-
-            // 9. Doanh thu 7 ngày gần nhất
-            const weeklyRevenue = [];
-            const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-            for (let i = 6; i >= 0; i--) {
-                const currentDate = new Date();
-                currentDate.setDate(currentDate.getDate() - i);
-                currentDate.setHours(0, 0, 0, 0);
-
-                const nextDate = new Date(currentDate);
-                nextDate.setDate(nextDate.getDate() + 1);
-
-                const dailyPayments = await Payment.find({
-                    createdAt: { $gte: currentDate, $lt: nextDate },
+            // Query song song
+            const [totalUsers, totalProducts, paymentsRange, paymentsToday, completedOrders] = await Promise.all([
+                User.countDocuments(),
+                Product.countDocuments(),
+                Payment.find({
+                    createdAt: { $gte: start, $lte: end },
+                }),
+                Payment.find({
+                    createdAt: { $gte: todayStart, $lte: today },
                     statusOrder: { $in: ['completed', 'delivered'] },
-                });
+                }),
+                Payment.countDocuments({
+                    statusOrder: { $in: ['completed', 'delivered'] },
+                }),
+            ]);
 
-                const dailyRevenue = dailyPayments.reduce((total, payment) => total + payment.totalPrice, 0);
+            // Revenue today
+            const todayRevenue = paymentsToday.reduce((t, p) => t + p.totalPrice, 0);
 
-                weeklyRevenue.push({
-                    _id: dayNames[currentDate.getDay()],
-                    dailyRevenue,
-                });
-            }
-
-            // 10. Doanh số theo danh mục sản phẩm
-            const categorySales = await Payment.aggregate([
+            // Doanh số theo tháng
+            const monthlySalesAgg = await Payment.aggregate([
                 {
                     $match: {
                         statusOrder: { $in: ['completed', 'delivered'] },
+                        createdAt: {
+                            $gte: new Date(today.getFullYear(), 0, 1),
+                            $lte: new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999),
+                        },
                     },
                 },
-                { $unwind: '$products' },
-                {
-                    $lookup: {
-                        from: 'products',
-                        localField: 'products.productId',
-                        foreignField: '_id',
-                        as: 'productDetails',
-                    },
-                },
-                { $unwind: '$productDetails' },
                 {
                     $group: {
-                        _id: '$productDetails.category',
-                        sales: { $sum: 1 },
+                        _id: { month: { $month: '$createdAt' } },
+                        sales: { $sum: '$totalPrice' },
                     },
                 },
-                {
-                    $project: {
-                        category: '$_id',
-                        sales: 1,
-                        _id: 0,
-                    },
-                },
-                { $sort: { sales: -1 } },
-                { $limit: 5 },
+                { $sort: { '_id.month': 1 } },
             ]);
 
-            // Chuyển đổi tên danh mục từ tiếng Anh sang tiếng Việt
-            const categoryMapping = {
-                ao: 'Áo',
-                quan: 'Quần',
-                vay: 'Váy',
-                dam: 'Đầm',
-                phu_kien: 'Phụ kiện',
-                giay_dep: 'Giày dép',
-                tui_xach: 'Túi xách',
-            };
+            const monthNames = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+            const monthlySales = monthNames.map((name, index) => {
+                const monthData = monthlySalesAgg.find((m) => m._id.month === index + 1);
+                return {
+                    month: name,
+                    sales: monthData ? monthData.sales : 0,
+                };
+            });
 
-            const formattedCategorySales = categorySales.map((item) => ({
-                category: categoryMapping[item.category] || item.category,
-                sales: item.sales,
+            // Weekly revenue (7 ngày gần nhất theo timeline)
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+            sevenDaysAgo.setHours(0, 0, 0, 0);
+
+            const paymentsLast7Days = await Payment.find({
+                createdAt: { $gte: sevenDaysAgo },
+                statusOrder: { $in: ['completed', 'delivered'] },
+            });
+
+            const dailyMap = Array(7).fill(0);
+
+            paymentsLast7Days.forEach((p) => {
+                const diff = Math.floor((today - new Date(p.createdAt)) / (1000 * 60 * 60 * 24));
+                const index = 6 - diff; // từ 6 -> 0 (timeline)
+                if (index >= 0 && index < 7) {
+                    dailyMap[index] += p.totalPrice;
+                }
+            });
+
+            const dayNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+            const weeklyRevenue = dayNames.map((d, i) => ({
+                _id: d,
+                dailyRevenue: dailyMap[i],
             }));
 
-            // 11. Doanh số theo tháng (12 tháng)
-            const monthlySales = [];
-            const monthNames = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+            // Recent orders (chỉ lấy đơn thành công)
+            const recentOrdersRaw = await Payment.find().sort({ createdAt: -1 }).limit(6).lean();
 
-            const currentYear = today.getFullYear();
-
-            for (let i = 0; i < 12; i++) {
-                const startOfMonth = new Date(currentYear, i, 1);
-                const endOfMonth = new Date(currentYear, i + 1, 0, 23, 59, 59, 999);
-
-                const monthlyPayments = await Payment.aggregate([
-                    {
-                        $match: {
-                            createdAt: { $gte: startOfMonth, $lte: endOfMonth },
-                            statusOrder: { $in: ['completed', 'delivered'] },
-                        },
-                    },
-                    {
-                        $group: {
-                            _id: null,
-                            sales: { $sum: '$totalPrice' },
-                        },
-                    },
-                ]);
-
-                monthlySales.push({
-                    month: monthNames[i],
-                    sales: monthlyPayments.length > 0 ? monthlyPayments[0].sales : 0,
-                });
-            }
-
-            // 12. Nguồn truy cập (mock data vì không có dữ liệu thật)
-            const trafficSources = [
-                { source: 'Trực tiếp', value: 35 },
-                { source: 'Google', value: 25 },
-                { source: 'Facebook', value: 20 },
-                { source: 'Tiktok', value: 15 },
-                { source: 'Email', value: 5 },
-            ];
-
-            // 13. Đơn hàng gần đây
-            const recentOrders = await Payment.find().sort({ createdAt: -1 }).limit(6).lean();
             const formattedRecentOrders = await Promise.all(
-                recentOrders.map(async (order, index) => {
-                    // Lấy thông tin sản phẩm đầu tiên trong đơn hàng
-                    const firstProduct = order.products && order.products.length > 0 ? order.products[0] : null;
+                recentOrdersRaw.map(async (order, index) => {
+                    const firstProduct = order.products?.[0];
 
-                    if (!firstProduct) {
-                        return {
-                            key: (index + 1).toString(),
-                            order: order._id.toString().slice(-6).toUpperCase(),
-                            customer: order.fullName,
-                            product: 'Không có sản phẩm',
-                            amount: order.totalPrice,
-                            status: order.statusOrder,
-                        };
-                    }
-
-                    const dataProduct = await Product.findOne({ _id: firstProduct.productId });
-                    const productName = dataProduct ? dataProduct.name : 'Sản phẩm không tồn tại';
+                    const productData = firstProduct ? await Product.findById(firstProduct.productId).lean() : null;
 
                     return {
-                        key: (index + 1).toString(),
+                        key: index + 1,
                         order: order._id.toString().slice(-6).toUpperCase(),
                         customer: order.fullName,
-                        product: productName,
+                        product: productData?.name || 'Không có sản phẩm',
                         amount: order.totalPrice,
                         status: order.statusOrder,
                     };
                 }),
             );
 
-            // Trả về kết quả
+            // Conversion rate
+            const conversion = totalUsers ? Math.round((completedOrders / totalUsers) * 100) : 0;
+
             return res.status(200).json({
                 status: 'success',
                 code: 200,
                 metadata: {
                     totalUsers,
-                    newOrders,
+                    newOrders: paymentsRange.filter((p) => ['completed', 'delivered'].includes(p.statusOrder)).length,
                     todayRevenue,
                     totalProducts,
-                    conversion,
-                    userGrowth,
-                    orderGrowth,
-                    revenueGrowth,
-                    weeklyRevenue,
-                    categorySales: formattedCategorySales,
                     monthlySales,
-                    trafficSources,
+                    conversion,
+                    weeklyRevenue,
                     recentOrders: formattedRecentOrders,
                 },
             });
         } catch (error) {
-            console.error('Error getting statistics:', error);
+            console.error(error);
             return res.status(500).json({
                 status: 'error',
-                code: 500,
                 message: 'Lỗi khi lấy thống kê',
             });
         }

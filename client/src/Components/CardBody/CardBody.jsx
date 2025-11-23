@@ -16,10 +16,10 @@ function CardBody({ item }) {
                 <p className={cx('price')}>
                     Giá: {item.price.toLocaleString('it-IT', { style: 'currency', currency: 'VND' })}
                 </p>
-                {item.attributes.brand ? (
-                    <p className={cx('brand')}>Thương hiệu: {item.attributes.brand}</p>
+                {item.brand ? (
+                    <p className={cx('brand')}>Thương hiệu: {item.brand}</p>
                 ) : (
-                    <p className={cx('brand')}>Mùi hương: {item.attributes.scent}</p>
+                    <p className={cx('brand')}>Mùi hương: {item.scent}</p>
                 )}
                 <p className={cx('stock')}>Số lượng còn: {item.stock} sản phẩm</p>
             </div>
