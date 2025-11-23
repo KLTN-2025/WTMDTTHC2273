@@ -14,7 +14,7 @@ import {
     Stack,
     Divider,
 } from '@mui/material';
-import { requestGetProducts, requestFilterProducts } from '../../config/request';
+import { requestGetProducts, requestFilterProducts, requestGetAllCategories } from '../../config/request';
 import CardBody from '../../Components/CardBody/CardBody';
 import Header from '../../Components/Header/Header';
 import Footer from '../../Components/Footer/Footer';
@@ -41,15 +41,7 @@ function Category() {
     });
 
     // Danh mục cơ bản
-    const categories = [
-        { value: 'ao', label: 'Áo' },
-        { value: 'quan', label: 'Quần' },
-        { value: 'vay', label: 'Váy' },
-        { value: 'dam', label: 'Đầm' },
-        { value: 'phu_kien', label: 'Phụ kiện' },
-        { value: 'giay_dep', label: 'Giày dép' },
-        { value: 'tui_xach', label: 'Túi xách' },
-    ];
+    const [categories, setCategories] = useState([]);
 
     const genders = [
         { value: 'nam', label: 'Nam' },
@@ -77,7 +69,18 @@ function Category() {
                 setFilteredProducts([]);
             }
         };
+
+        const fetchCategories = async () => {
+            try {
+                const res = await requestGetAllCategories();
+                setCategories(res.metadata || []);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+            }
+        };
+
         fetchProducts();
+        fetchCategories();
     }, []);
 
     // Lấy danh sách unique từ dữ liệu
@@ -161,8 +164,8 @@ function Category() {
                             >
                                 <MenuItem value="">Tất cả</MenuItem>
                                 {categories.map((cat) => (
-                                    <MenuItem key={cat.value} value={cat.value}>
-                                        {cat.label}
+                                    <MenuItem key={cat._id} value={cat._id}>
+                                        {cat.categoryName}
                                     </MenuItem>
                                 ))}
                             </Select>

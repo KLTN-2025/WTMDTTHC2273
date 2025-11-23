@@ -4,6 +4,7 @@ const { BadRequestError } = require('../core/error.response');
 const cloudinary = require('../utils/configCloudDinary');
 const modelCoupon = require('../models/coupon.model');
 const modelPreviewProduct = require('../models/previewProduct.model');
+const modelCategory = require('../models/category.model');
 const modelUser = require('../models/users.model');
 
 function getPublicId(url) {
@@ -24,17 +25,17 @@ function getPublicId(url) {
 
 class controllerProducts {
     async createProduct(req, res) {
-        const { name, category, gender, price, stock, description, attributes, images } = req.body;
+        const { name, categoryId, gender, price, stock, description, images, size, color, material, brand } = req.body;
 
-        // Kiểm tra đầy đủ thông tin bắt buộc
-        if (!name || !category || !gender || !price || !stock || !description || !attributes || !images) {
+        // Kiểm tra thông tin bắt buộc
+        if (!name || !categoryId || !gender || !price || !stock || !description || !images) {
             throw new BadRequestError('Vui lòng nhập đầy đủ thông tin sản phẩm');
         }
 
-        // Kiểm tra category hợp lệ
-        const validCategories = ['ao', 'quan', 'vay', 'dam', 'phu_kien', 'giay_dep', 'tui_xach'];
-        if (!validCategories.includes(category)) {
-            throw new BadRequestError('Danh mục sản phẩm không hợp lệ');
+        // Kiểm tra categoryId có tồn tại
+        const category = await modelCategory.findById(categoryId);
+        if (!category) {
+            throw new BadRequestError('Danh mục không tồn tại');
         }
 
         // Kiểm tra gender hợp lệ
@@ -43,43 +44,30 @@ class controllerProducts {
             throw new BadRequestError('Giới tính sản phẩm không hợp lệ');
         }
 
-        // Kiểm tra attributes theo category
-        let requiredAttributes = ['color', 'brand'];
-
-        switch (category) {
-            case 'ao':
-            case 'quan':
-            case 'vay':
-            case 'dam':
-                requiredAttributes.push('size', 'material');
-                break;
-            case 'giay_dep':
-                requiredAttributes.push('size');
-                break;
-            case 'phu_kien':
-            case 'tui_xach':
-                requiredAttributes.push('material');
-                break;
-        }
-
-        for (const attr of requiredAttributes) {
-            if (!attributes[attr]) {
-                throw new BadRequestError(`Vui lòng nhập ${attr} của sản phẩm`);
-            }
-        }
+        // Validate thuộc tính
+        if (!size) throw new BadRequestError('Vui lòng nhập kích thước');
+        if (!color) throw new BadRequestError('Vui lòng nhập màu sắc');
+        if (!material) throw new BadRequestError('Vui lòng nhập chất liệu');
+        if (!brand) throw new BadRequestError('Vui lòng nhập thương hiệu');
 
         const newProduct = await modelProduct.create({
+            categoryId,
             name,
-            category,
             gender,
             price,
             stock,
             description,
-            attributes,
             images,
+            size,
+            color,
+            material,
+            brand,
         });
 
-        new OK({ message: 'Tạo sản phẩm thành công', metadata: newProduct }).send(res);
+        new OK({
+            message: 'Tạo sản phẩm thành công',
+            metadata: newProduct,
+        }).send(res);
     }
 
     async uploadImage(req, res) {
@@ -279,19 +267,26 @@ class controllerProducts {
 
     async editProduct(req, res) {
         try {
-            const { _id } = req.body;
-            const product = await modelProduct.findByIdAndUpdate(_id, {
-                ...req.body,
-            });
+            const { _id, ...updateData } = req.body;
+            const product = await modelProduct.findByIdAndUpdate(_id, updateData, { new: true, runValidators: true });
+
             if (!product) {
-                throw new BadRequestError('Không tìm thấy sản phẩm');
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy sản phẩm',
+                });
             }
-            new OK({ message: 'Chiềnh sửa thống tin sản phẩm thành cong', metadata: product }).send(res);
-        } catch (error) {
-            new BadRequestError({
-                message: 'Lỗi khi chiềnh sửa thống tin sản phẩm',
-                error: error.message,
+
+            return new OK({
+                message: 'Chỉnh sửa thông tin sản phẩm thành công',
+                metadata: product,
             }).send(res);
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: 'Lỗi khi chỉnh sửa thông tin sản phẩm',
+                error: error.message,
+            });
         }
     }
 

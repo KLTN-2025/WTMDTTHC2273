@@ -290,6 +290,32 @@ export const requestGetPreviewProduct = async () => {
     return res.data;
 };
 
+//category
+export const requestCreateCategory = async (data) => {
+    const res = await request.post('/api/create-category', data);
+    return res.data;
+};
+
+export const requestGetAllCategories = async () => {
+    const res = await request.get('/api/categories');
+    return res.data;
+};
+
+export const requestGetCategory = async (id) => {
+    const res = await request.get('/api/category', { params: { id } });
+    return res.data;
+};
+
+export const requestDeleteCategory = async (id) => {
+    const res = await request.get('/api/category', { params: { id } });
+    return res.data;
+};
+
+export const requestUpdateCategory = async (id) => {
+    const res = await request.get('/api/category', { params: { id } });
+    return res.data;
+};
+
 let isRefreshing = false;
 let failedRequestsQueue = [];
 

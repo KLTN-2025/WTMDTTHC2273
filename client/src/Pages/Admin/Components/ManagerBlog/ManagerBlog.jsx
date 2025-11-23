@@ -15,7 +15,7 @@ import dayjs from 'dayjs';
 
 import { requestDeleteBlog, requestGetBlogs } from '../../../../config/request';
 
-import { message } from 'antd';
+import { message, Popconfirm } from 'antd';
 
 const cx = classNames.bind(styles);
 
@@ -85,13 +85,17 @@ function ManagerBlog() {
                                         </TableCell>
                                         <TableCell align="center">{dayjs(row.date).format('DD/MM/YYYY')}</TableCell>
                                         <TableCell align="center">
-                                            <Button
-                                                onClick={() => handleDeleteBlog(row.id)}
-                                                color="error"
-                                                variant="contained"
+                                            <Popconfirm
+                                                title="Xóa sản phẩm"
+                                                description="Bạn có chắc chắn muốn xóa sản phẩm này?"
+                                                onConfirm={() => handleDeleteBlog(row.id)}
+                                                okText="Đồng ý"
+                                                cancelText="Hủy"
                                             >
-                                                Xoá
-                                            </Button>
+                                                <Button color="error" variant="contained">
+                                                    Xoá
+                                                </Button>
+                                            </Popconfirm>
                                         </TableCell>
                                     </TableRow>
                                 ))}

@@ -24,28 +24,32 @@ import {
     requestUploadImage,
     requestEditProduct,
     requestDeleteImage,
+    requestGetAllCategories,
 } from '../../../../../config/request';
 
 const cx = classNames.bind(styles);
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Option } = Select;
 
 function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) {
     const [form] = Form.useForm();
-    const [selectedCategory, setSelectedCategory] = useState('');
     const [fileList, setFileList] = useState([]);
     const [imageUrls, setImageUrls] = useState([]);
     const [description, setDescription] = useState('');
+    const [categories, setCategories] = useState([]);
 
-    const categories = [
-        { value: 'ao', label: 'Áo' },
-        { value: 'quan', label: 'Quần' },
-        { value: 'vay', label: 'Váy' },
-        { value: 'dam', label: 'Đầm' },
-        { value: 'phu_kien', label: 'Phụ kiện' },
-        { value: 'giay_dep', label: 'Giày dép' },
-        { value: 'tui_xach', label: 'Túi xách' },
-    ];
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await requestGetAllCategories();
+                setCategories(res.metadata || []);
+            } catch (error) {
+                console.log('Lỗi lấy danh mục:', error);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     const genders = [
         { value: 'nam', label: 'Nam' },
@@ -53,80 +57,26 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
         { value: 'unisex', label: 'Unisex' },
     ];
 
-    const categoryAttributes = {
-        ao: [
-            { name: 'size', label: 'Kích thước', type: 'text' },
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'material', label: 'Chất liệu', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-        quan: [
-            { name: 'size', label: 'Kích thước', type: 'text' },
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'material', label: 'Chất liệu', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-        vay: [
-            { name: 'size', label: 'Kích thước', type: 'text' },
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'material', label: 'Chất liệu', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-        dam: [
-            { name: 'size', label: 'Kích thước', type: 'text' },
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'material', label: 'Chất liệu', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-        phu_kien: [
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'material', label: 'Chất liệu', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-        giay_dep: [
-            { name: 'size', label: 'Kích thước', type: 'text' },
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-        tui_xach: [
-            { name: 'color', label: 'Màu sắc', type: 'text' },
-            { name: 'material', label: 'Chất liệu', type: 'text' },
-            { name: 'brand', label: 'Thương hiệu', type: 'text' },
-        ],
-    };
-
-    // Initialize form with product data if in edit mode
+    // Set các field cơ bản khi vào chế độ edit
     useEffect(() => {
-        if (isEdit && initialProduct) {
+        if (isEdit && initialProduct?.product) {
+            const p = initialProduct.product;
             form.setFieldsValue({
-                name: initialProduct.name,
-                category: initialProduct.category,
-                gender: initialProduct.gender,
-                price: initialProduct.price,
-                stock: initialProduct.stock,
-                ...Object.keys(initialProduct.attributes || {}).reduce((acc, key) => {
-                    acc[`attr_${key}`] = initialProduct.attributes[key];
-                    return acc;
-                }, {}),
+                name: p.name,
+                gender: p.gender,
+                price: p.price,
+                stock: p.stock,
+                category: p.categoryId,
+                size: p.size,
+                color: p.color,
+                material: p.material,
+                brand: p.brand,
             });
 
-            setSelectedCategory(initialProduct.category);
-            setDescription(initialProduct.description || '');
-            setImageUrls(initialProduct.images || []);
+            setDescription(p.description || '');
+            setImageUrls(p.images || []);
         }
-    }, [isEdit, initialProduct, form]);
-
-    const handleCategoryChange = (value) => {
-        setSelectedCategory(value);
-
-        // Reset attribute fields when category changes
-        const attributeFields = form.getFieldsValue();
-        Object.keys(attributeFields).forEach((key) => {
-            if (key.startsWith('attr_')) {
-                form.setFieldValue(key, '');
-            }
-        });
-    };
+    }, [isEdit, initialProduct]);
 
     const handleEditorChange = (content) => {
         setDescription(content);
@@ -138,9 +88,11 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
         const formData = new FormData();
         formData.append('images', file);
         formData.append('typeImages', 'product');
+
         try {
             message.loading('Đang tải lên hình ảnh...');
             const res = await requestUploadImage(formData);
+
             setImageUrls((prev) => [...prev, ...res.metadata]);
             onSuccess('ok');
             message.destroy();
@@ -152,81 +104,58 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
         }
     };
 
-    const handleRemoveImage = (index) => {
-        setImageUrls((prev) => prev.filter((_, i) => i !== index));
+    const handleDeleteImages = async (index, url) => {
+        message.loading('Đang xóa hình ảnh...');
+
+        try {
+            const res = await requestDeleteImage(url);
+
+            setImageUrls((prev) => prev.filter((_, i) => i !== index));
+            message.destroy();
+            message.success(res.message);
+        } catch (error) {
+            message.destroy();
+            message.error('Có lỗi xảy ra');
+        }
     };
 
     const onFinish = async (values) => {
         try {
-            // Prepare product data object
             const productData = {
                 name: values.name,
-                category: values.category,
+                categoryId: values.category,
                 gender: values.gender,
                 price: values.price,
                 stock: values.stock,
                 description: description,
                 images: imageUrls,
-                attributes: Object.keys(values)
-                    .filter((key) => key.startsWith('attr_'))
-                    .reduce((acc, key) => {
-                        const attributeName = key.replace('attr_', '');
-                        acc[attributeName] = values[key];
-                        return acc;
-                    }, {}),
+                size: values.size,
+                color: values.color,
+                material: values.material,
+                brand: values.brand,
             };
 
-            // Add product ID if in edit mode
             if (isEdit && initialProduct) {
-                productData._id = initialProduct._id;
+                productData._id = initialProduct.product._id;
             }
 
-            // Submit data to API
             const res = isEdit ? await requestEditProduct(productData) : await requestCreateProduct(productData);
 
             message.success(res.message);
-
-            if (onSuccess) {
-                onSuccess();
-            }
+            if (onSuccess) onSuccess();
         } catch (error) {
             message.error(error.response?.data?.message || 'Có lỗi xảy ra');
-        }
-    };
-
-    const handleDeleteImages = async (index, url) => {
-        message.loading('Đang xóa hình ảnh...');
-        try {
-            const res = await requestDeleteImage(url);
-            setImageUrls((prev) => prev.filter((_, i) => i !== index));
-            message.success(res.message);
-            message.destroy();
-        } catch (error) {
-            message.error(error.response?.data?.message || 'Có lỗi xảy ra');
-            message.destroy();
         }
     };
 
     return (
         <Card className={cx('wrapper')} bordered={false}>
-            <Form
-                form={form}
-                layout="vertical"
-                onFinish={onFinish}
-                requiredMark="optional"
-                initialValues={{
-                    name: '',
-                    category: '',
-                    gender: '',
-                    price: '',
-                    stock: '',
-                }}
-            >
+            <Form form={form} layout="vertical" onFinish={onFinish} requiredMark="optional">
+                {/* Basic info */}
                 <div>
                     <Title level={5}>Thông tin cơ bản</Title>
                     <Divider />
                 </div>
-
                 <Row gutter={24}>
                     <Col span={12}>
                         <Form.Item
@@ -244,10 +173,10 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
                             label="Danh mục"
                             rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
                         >
-                            <Select placeholder="Chọn danh mục" onChange={handleCategoryChange}>
-                                {categories.map((category) => (
-                                    <Option key={category.value} value={category.value}>
-                                        {category.label}
+                            <Select placeholder="Chọn danh mục">
+                                {categories.map((c) => (
+                                    <Option key={c._id} value={c._id}>
+                                        {c.categoryName}
                                     </Option>
                                 ))}
                             </Select>
@@ -261,9 +190,9 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
                             rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
                         >
                             <Select placeholder="Chọn giới tính">
-                                {genders.map((gender) => (
-                                    <Option key={gender.value} value={gender.value}>
-                                        {gender.label}
+                                {genders.map((g) => (
+                                    <Option key={g.value} value={g.value}>
+                                        {g.label}
                                     </Option>
                                 ))}
                             </Select>
@@ -291,37 +220,52 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
                             <InputNumber style={{ width: '100%' }} placeholder="Nhập số lượng tồn kho" min={0} />
                         </Form.Item>
                     </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name="size"
+                            label="Kích thước"
+                            rules={[{ required: true, message: 'Vui lòng nhập kích thước' }]}
+                        >
+                            <Input placeholder="Nhập kích thước" />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                        <Form.Item
+                            name="color"
+                            label="Màu sắc"
+                            rules={[{ required: true, message: 'Vui lòng nhập màu sắc' }]}
+                        >
+                            <Input placeholder="Nhập màu sắc" />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                        <Form.Item
+                            name="material"
+                            label="Chất liệu"
+                            rules={[{ required: true, message: 'Vui lòng nhập chất liệu' }]}
+                        >
+                            <Input placeholder="Nhập chất liệu" />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                        <Form.Item
+                            name="brand"
+                            label="Thương hiệu"
+                            rules={[{ required: true, message: 'Vui lòng nhập thương hiệu' }]}
+                        >
+                            <Input placeholder="Nhập thương hiệu" />
+                        </Form.Item>
+                    </Col>
                 </Row>
-
-                {selectedCategory && (
-                    <>
-                        <div style={{ marginTop: 24 }}>
-                            <Title level={5}>Thông tin chi tiết</Title>
-                            <Divider />
-                        </div>
-
-                        <Row gutter={24}>
-                            {categoryAttributes[selectedCategory]?.map((attr) => (
-                                <Col span={12} key={attr.name}>
-                                    <Form.Item
-                                        name={`attr_${attr.name}`}
-                                        label={attr.label}
-                                        rules={[{ required: true, message: `Vui lòng nhập ${attr.label}` }]}
-                                    >
-                                        <Input placeholder={`Nhập ${attr.label}`} />
-                                    </Form.Item>
-                                </Col>
-                            ))}
-                        </Row>
-                    </>
-                )}
-
+                {/* Description */}
                 <div style={{ marginTop: 24 }}>
                     <Title level={5}>Mô tả sản phẩm</Title>
                     <Divider />
                 </div>
-
-                <Form.Item label="Mô tả" style={{ marginBottom: 24 }}>
+                <Form.Item label="Mô tả">
                     <Editor
                         value={description}
                         onEditorChange={handleEditorChange}
@@ -334,12 +278,11 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
                         }}
                     />
                 </Form.Item>
-
+                {/* Images */}
                 <div style={{ marginTop: 24 }}>
                     <Title level={5}>Hình ảnh sản phẩm</Title>
                     <Divider />
                 </div>
-
                 <Form.Item label="Hình ảnh">
                     <Upload
                         customRequest={handleImageUpload}
@@ -371,7 +314,7 @@ function AddProduct({ isEdit = false, productData: initialProduct, onSuccess }) 
                         </Row>
                     </div>
                 </Form.Item>
-
+                {/* Submit */}
                 <Form.Item style={{ marginTop: 24 }}>
                     <Space>
                         <Button type="primary" htmlType="submit">
