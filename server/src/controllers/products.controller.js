@@ -173,7 +173,7 @@ class controllerProducts {
             let filter = {};
 
             // Danh mục
-            if (category) filter.category = category;
+            if (category) filter['categoryId'] = category;
 
             // Giá
             if (minPrice || maxPrice) {
@@ -188,7 +188,7 @@ class controllerProducts {
             }
 
             // Giới tính
-            if (gender) filter['attributes.gender'] = gender;
+            if (gender) filter['gender'] = gender;
 
             // Sắp xếp
             let sortOptions = {};
@@ -206,7 +206,6 @@ class controllerProducts {
             }
 
             const products = await modelProduct.find(filter).sort(sortOptions);
-
             new OK({
                 message: 'Lọc sản phẩm thành công',
                 metadata: products,

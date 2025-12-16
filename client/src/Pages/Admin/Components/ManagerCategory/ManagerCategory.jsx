@@ -103,7 +103,7 @@ function CategoryManagement() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', margin: 16 }}>
                 <h2>Quản lý danh mục sản phẩm</h2>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
                     Thêm danh mục
