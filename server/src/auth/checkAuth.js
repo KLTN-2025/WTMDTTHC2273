@@ -35,7 +35,7 @@ const authAdmin = async (req, res, next) => {
         req.user = decoded;
         next();
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 

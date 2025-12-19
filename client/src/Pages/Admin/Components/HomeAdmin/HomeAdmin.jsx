@@ -102,12 +102,12 @@ function HomeAdmin() {
 
             {/* Charts row 1: Line + Conversion */}
             <Row gutter={[20, 20]} style={{ marginTop: 24 }}>
-                <Col xs={24} md={16}>
+                <Col xs={24}>
                     <MonthlySalesChart stats={stats} isLoading={isLoading} />
                 </Col>
-                <Col xs={24} md={8}>
+                {/* <Col xs={24} md={8}>
                     <ConversionChart stats={stats} isLoading={isLoading} />
-                </Col>
+                </Col> */}
             </Row>
 
             {/* Charts row 2: Bar weekly revenue */}

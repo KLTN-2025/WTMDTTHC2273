@@ -33,11 +33,6 @@ function RecentOrdersTable({ stats, isLoading }) {
             render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
         },
         {
-            title: 'Sản phẩm',
-            dataIndex: 'product',
-            key: 'product',
-        },
-        {
             title: 'Số tiền',
             dataIndex: 'amount',
             key: 'amount',

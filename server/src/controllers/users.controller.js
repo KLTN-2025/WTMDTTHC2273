@@ -13,7 +13,8 @@ const otpGenerator = require('otp-generator');
 const CryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const { jwtDecode } = require('jwt-decode');
-
+const statsService = require('../services/statistics');
+const { getDateRange, getTodayRange, getSevenDaysAgo } = require('../utils/date');
 class controllerUsers {
     async register(req, res) {
         const { fullName, email, password, phone } = req.body;
@@ -423,133 +424,40 @@ class controllerUsers {
         try {
             const { startDate, endDate } = req.query;
 
-            // Chuẩn hóa ngày lọc
-            const start = startDate ? new Date(startDate) : new Date();
-            const end = endDate ? new Date(endDate) : new Date();
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            const { start, end } = getDateRange(startDate, endDate);
+            const { start: todayStart, end: todayEnd } = getTodayRange();
+            const sevenDaysAgo = getSevenDaysAgo();
+            const year = new Date().getUTCFullYear();
 
-            const today = new Date();
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-
-            const User = require('../models/users.model');
-            const Product = require('../models/product.models');
-            const Payment = require('../models/payments.model');
-
-            // Query song song
-            const [totalUsers, totalProducts, paymentsRange, paymentsToday, completedOrders] = await Promise.all([
-                User.countDocuments(),
-                Product.countDocuments(),
-                Payment.find({
-                    createdAt: { $gte: start, $lte: end },
-                }),
-                Payment.find({
-                    createdAt: { $gte: todayStart, $lte: today },
-                    statusOrder: { $in: ['completed', 'delivered'] },
-                }),
-                Payment.countDocuments({
-                    statusOrder: { $in: ['completed', 'delivered'] },
-                }),
+            const [basicStats, todayRevenue, monthlySales, weeklyRevenue, recentOrders] = await Promise.all([
+                statsService.getBasicStats(start, end),
+                statsService.getTodayRevenue(todayStart, todayEnd),
+                statsService.getMonthlySales(year),
+                statsService.getWeeklyRevenue(sevenDaysAgo),
+                statsService.getRecentOrders(6),
             ]);
 
-            // Revenue today
-            const todayRevenue = paymentsToday.reduce((t, p) => t + p.totalPrice, 0);
-
-            // Doanh số theo tháng
-            const monthlySalesAgg = await Payment.aggregate([
-                {
-                    $match: {
-                        statusOrder: { $in: ['completed', 'delivered'] },
-                        createdAt: {
-                            $gte: new Date(today.getFullYear(), 0, 1),
-                            $lte: new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999),
-                        },
-                    },
-                },
-                {
-                    $group: {
-                        _id: { month: { $month: '$createdAt' } },
-                        sales: { $sum: '$totalPrice' },
-                    },
-                },
-                { $sort: { '_id.month': 1 } },
-            ]);
-
-            const monthNames = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
-            const monthlySales = monthNames.map((name, index) => {
-                const monthData = monthlySalesAgg.find((m) => m._id.month === index + 1);
-                return {
-                    month: name,
-                    sales: monthData ? monthData.sales : 0,
-                };
-            });
-
-            // Weekly revenue (7 ngày gần nhất theo timeline)
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-            sevenDaysAgo.setHours(0, 0, 0, 0);
-
-            const paymentsLast7Days = await Payment.find({
-                createdAt: { $gte: sevenDaysAgo },
-                statusOrder: { $in: ['completed', 'delivered'] },
-            });
-
-            const dailyMap = Array(7).fill(0);
-
-            paymentsLast7Days.forEach((p) => {
-                const diff = Math.floor((today - new Date(p.createdAt)) / (1000 * 60 * 60 * 24));
-                const index = 6 - diff; // từ 6 -> 0 (timeline)
-                if (index >= 0 && index < 7) {
-                    dailyMap[index] += p.totalPrice;
-                }
-            });
-
-            const dayNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-            const weeklyRevenue = dayNames.map((d, i) => ({
-                _id: d,
-                dailyRevenue: dailyMap[i],
-            }));
-
-            // Recent orders (chỉ lấy đơn thành công)
-            const recentOrdersRaw = await Payment.find().sort({ createdAt: -1 }).limit(6).lean();
-
-            const formattedRecentOrders = await Promise.all(
-                recentOrdersRaw.map(async (order, index) => {
-                    const firstProduct = order.products?.[0];
-
-                    const productData = firstProduct ? await Product.findById(firstProduct.productId).lean() : null;
-
-                    return {
-                        key: index + 1,
-                        order: order._id.toString().slice(-6).toUpperCase(),
-                        customer: order.fullName,
-                        product: productData?.name || 'Không có sản phẩm',
-                        amount: order.totalPrice,
-                        status: order.statusOrder,
-                    };
-                }),
-            );
-
-            // Conversion rate
-            const conversion = totalUsers ? Math.round((completedOrders / totalUsers) * 100) : 0;
+            const conversion = basicStats.totalUsers
+                ? Math.round((basicStats.completedOrders / basicStats.totalUsers) * 100)
+                : 0;
 
             return res.status(200).json({
                 status: 'success',
-                code: 200,
                 metadata: {
-                    totalUsers,
-                    newOrders: paymentsRange.filter((p) => ['completed', 'delivered'].includes(p.statusOrder)).length,
+                    totalUsers: basicStats.totalUsers,
+                    totalProducts: basicStats.totalProducts,
+                    newOrders: basicStats.paymentsRange.filter((p) =>
+                        ['completed', 'delivered'].includes(p.statusOrder),
+                    ).length,
                     todayRevenue,
-                    totalProducts,
                     monthlySales,
-                    conversion,
                     weeklyRevenue,
-                    recentOrders: formattedRecentOrders,
+                    recentOrders,
+                    conversion,
                 },
             });
-        } catch (error) {
-            console.error(error);
+        } catch (err) {
+            console.error(err);
             return res.status(500).json({
                 status: 'error',
                 message: 'Lỗi khi lấy thống kê',
